@@ -1,0 +1,3587 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>xxsof - Application d'Investissement</title>
+  
+  <!-- Firebase App & Firestore SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #0b0f19;
+      color: #ffffff;
+      margin: 0;
+      padding: 0;
+      padding-bottom: 75px;
+    }
+
+    .content {
+      padding: 12px;
+      max-width: 480px;
+      margin: auto;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* ÉCRAN D'AUTHENTIFICATION (STYLE EXACT DE LA CAPTURE) */
+    #auth-page {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #0b0f19;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      padding: 30px 20px;
+      overflow-y: auto;
+    }
+
+    #auth-page.hidden {
+      display: none !important;
+    }
+
+    /* En-tête des sous-pages internes */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding: 4px 0;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .back-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .header-right-icon {
+      border: 1px solid #4b5563;
+      border-radius: 6px;
+      padding: 4px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    /* Style de la bannière violette "Aperçu" pour les commandes */
+    .blue-banner-card {
+      background: linear-gradient(180deg, rgba(109, 40, 217, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%), 
+                  url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500') center/cover;
+      border-radius: 16px;
+      padding: 18px 20px;
+      border: 1px solid #7c3aed;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    /* Ticker */
+    .ticker-bar {
+      background-color: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 20px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #9ca3af;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    #ticker-text {
+      transition: opacity 0.3s ease-in-out;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    /* Actions Rapides */
+    .action-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      background-color: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 10px 6px;
+      margin-bottom: 16px;
+    }
+
+    .action-card {
+      background: transparent;
+      border: none;
+      border-radius: 12px;
+      padding: 8px 2px;
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+
+    .action-card:active {
+      transform: scale(0.96);
+    }
+
+    .action-icon-box {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 6px;
+    }
+
+    .action-icon-box svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .icon-recharge { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+    .icon-retrait { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    .icon-service { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .icon-gratuit { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+
+    .action-title {
+      font-size: 11px;
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+
+    /* Formulaires Dépôt */
+    .form-card {
+      background-color: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .input-box {
+      width: 100%;
+      background-color: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 10px;
+      padding: 12px;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      margin-bottom: 14px;
+    }
+
+    .select-box {
+      width: 100%;
+      background-color: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 10px;
+      padding: 12px;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      margin-bottom: 14px;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .preset-btn {
+      background-color: #1f2937;
+      border: 1px solid #374151;
+      color: #cbd5e1;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .preset-btn.active {
+      background-color: #8b5cf6;
+      color: #fff;
+      border-color: #8b5cf6;
+    }
+
+    .method-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .method-btn {
+      background-color: #1f2937;
+      border: 1px solid #374151;
+      color: #cbd5e1;
+      padding: 12px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .method-btn.active {
+      border-color: #8b5cf6;
+      color: #a78bfa;
+      background-color: rgba(139, 92, 246, 0.1);
+    }
+
+    .submit-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+      color: #ffffff;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    /* DESIGN PAGE RETRAIT */
+    .retrait-section-title {
+      font-size: 15px;
+      color: #ffffff;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    .bank-card-select {
+      background-color: #111827;
+      border: 1px solid #374151;
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #ffffff;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .bank-card-select:hover {
+      border-color: #ef4444;
+    }
+
+    .bank-card-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .amount-input-wrapper {
+      display: flex;
+      align-items: baseline;
+      border-bottom: 1px solid #374151;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      background-color: #111827;
+      border-radius: 12px 12px 0 0;
+      padding: 16px;
+    }
+
+    .currency-symbol {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-right: 12px;
+    }
+
+    .retrait-amount-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 16px;
+      width: 100%;
+    }
+
+    .retrait-fee-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #9ca3af;
+      margin-bottom: 30px;
+      padding: 0 4px;
+    }
+
+    .retrait-confirm-btn {
+      width: 100%;
+      background-color: #dc2626;
+      color: #ffffff;
+      border: none;
+      padding: 15px;
+      border-radius: 30px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+      text-align: center;
+    }
+
+    .retrait-instructions {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .retrait-instruction-item {
+      font-size: 12px;
+      color: #9ca3af;
+      line-height: 1.5;
+    }
+
+    /* MODALES */
+    .platform-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 999999;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .platform-modal.active {
+      display: flex;
+    }
+
+    .platform-modal-box {
+      background-color: #111827;
+      color: #ffffff;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 20px;
+      padding: 24px 20px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+      position: relative;
+      border: 1px solid #1f2937;
+    }
+
+    .platform-modal-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #a78bfa;
+      margin-bottom: 14px;
+    }
+
+    .platform-modal-body {
+      font-size: 13px;
+      color: #cbd5e1;
+      line-height: 1.6;
+      max-height: 60vh;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+
+    .platform-modal-body ol {
+      padding-left: 18px;
+      margin: 10px 0;
+    }
+
+    .platform-modal-body li {
+      margin-bottom: 8px;
+    }
+
+    .platform-modal-btns {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .platform-btn-telegram {
+      flex: 1;
+      background: linear-gradient(135deg, #4b5563 0%, #1f2937 100%);
+      color: #ffffff;
+      border: none;
+      padding: 12px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .platform-btn-close {
+      width: 100%;
+      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+      color: #ffffff;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .card-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #0b0f19;
+      z-index: 9999;
+      padding: 20px 16px;
+      overflow-y: auto;
+    }
+
+    .card-modal.active { display: block; }
+
+    .card-modal-content {
+      max-width: 480px;
+      margin: 10px auto;
+      background-color: #111827;
+      border-radius: 20px;
+      padding: 20px;
+      position: relative;
+    }
+
+    .card-modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .fullscreen-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #0b0f19;
+      z-index: 99999;
+      overflow-y: auto;
+      padding: 20px 16px;
+    }
+    .fullscreen-modal.active { display: block; }
+
+    .gopay-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: #ffffff;
+      color: #333333;
+      z-index: 9999;
+      overflow-y: auto;
+      padding: 20px 16px;
+    }
+
+    .gopay-modal.active { display: block; }
+
+    .gopay-close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background-color: #f3f4f6;
+      border: none;
+      color: #333;
+      font-size: 18px;
+      font-weight: bold;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gopay-modal-content { max-width: 480px; margin: 20px auto 0 auto; }
+    .gopay-header { text-align: center; margin-bottom: 20px; }
+    .gopay-logo-box { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .gopay-circle { width: 32px; height: 32px; border-radius: 50%; background-color: #8b5cf6; }
+    .gopay-title { font-weight: 800; font-size: 20px; color: #7c3aed; letter-spacing: 1px; }
+    .gopay-instruction { font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 20px; }
+    .gopay-amount-row { font-size: 15px; font-weight: 600; color: #333; margin-bottom: 20px; }
+    .gopay-amount-val { color: #7c3aed; font-weight: 800; font-size: 16px; }
+    .gopay-sublabel { font-size: 13px; color: #666; margin-bottom: 12px; }
+
+    .gopay-providers-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .gopay-provider-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      background-color: #fff;
+    }
+
+    .gopay-provider-card.active { border-color: #7c3aed; box-shadow: 0 0 0 2px #7c3aed; }
+    .gopay-provider-badge { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; color: #fff; }
+    .bg-orange { background-color: #ff6600; }
+    .bg-moov { background-color: #0055a5; }
+    .bg-wave { background-color: #1dc4e9; }
+    .gopay-provider-name { font-size: 12px; font-weight: 700; color: #333; text-transform: uppercase; }
+
+    .gopay-input-group {
+      display: flex;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 15px;
+      background-color: #fff;
+    }
+
+    .gopay-prefix { padding: 14px; background-color: #f9fafb; color: #7c3aed; font-weight: 700; border-right: 1px solid #d1d5db; font-size: 15px; display: flex; align-items: center; }
+    .gopay-input { flex: 1; border: none; padding: 14px; font-size: 14px; outline: none; color: #333; }
+
+    .gopay-warning-box {
+      background-color: #fef2f2;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      color: #dc2626;
+      line-height: 1.4;
+      display: flex;
+      gap: 8px;
+      margin-bottom: 25px;
+    }
+
+    .gopay-confirm-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+      color: #ffffff;
+      border: none;
+      padding: 16px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .payment-bf-view {
+      display: none;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      margin-top: 10px;
+      border: 1px solid #f3f4f6;
+    }
+
+    .payment-bf-title { font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 6px; }
+    .payment-bf-subtitle { font-size: 13px; color: #4b5563; margin-bottom: 20px; }
+    .payment-bf-subtitle span.provider-orange { color: #ea580c; font-weight: 700; }
+    .payment-bf-subtitle span.provider-moov { color: #0055a5; font-weight: 700; }
+    .payment-bf-subtitle span.provider-wave { color: #1dc4e9; font-weight: 700; }
+    .payment-bf-box { background-color: #f9fafb; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+    .payment-bf-field { margin-bottom: 14px; }
+    .payment-bf-field-label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+    .payment-bf-field-val { font-size: 22px; font-weight: 800; color: #7c3aed; display: flex; align-items: center; justify-content: space-between; }
+    .copy-icon-btn { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    
+    .pay-btn { color: #ffffff; width: 100%; border: none; padding: 14px; border-radius: 30px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 12px; text-align: center; text-decoration: none; display: block; }
+    .pay-btn.bg-orange-btn { background-color: #ea580c; }
+    .pay-btn.bg-moov-btn { background-color: #0055a5; }
+    .pay-btn.bg-wave-btn { background-color: #1dc4e9; }
+
+    .ussd-code-box { text-align: center; font-size: 14px; font-weight: 700; color: #7c3aed; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 24px; }
+    .refresh-section { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+    .refresh-subtext { font-size: 12px; color: #6b7280; }
+    .refresh-subtext span { color: #dc2626; font-weight: 700; }
+
+    /* Navbar */
+    .navbar {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background-color: #0b0f19;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #1f2937;
+      z-index: 1000;
+    }
+
+    .navbar.active {
+      display: flex;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .nav-item svg {
+      width: 20px;
+      height: 20px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      margin-bottom: 2px;
+    }
+
+    .nav-item.active { color: #facc15; }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE D'AUTHENTIFICATION (STYLE EXACT DE LA CAPTURE) -->
+  <div id="auth-page">
+    <div style="width: 100%; max-width: 420px; margin: 0 auto; padding-top: 10px;">
+      
+      <!-- TITRE DE LA PAGE -->
+      <h1 id="auth-main-title" style="font-size: 30px; font-weight: 800; color: #ffffff; margin-bottom: 24px; text-align: left;">Inscription</h1>
+
+      <!-- FORMULAIRE D'INSCRIPTION -->
+      <div id="register-container">
+        <!-- Numéro de téléphone avec select pays intégré -->
+        <div style="background-color: #171f2e; border-radius: 14px; display: flex; align-items: center; padding: 4px 14px; margin-bottom: 14px; border: 1px solid #232d42;">
+          <select id="reg-country" onchange="updateAuthForm('reg')" style="background: transparent; border: none; outline: none; color: #a78bfa; font-weight: 700; font-size: 15px; margin-right: 10px; cursor: pointer;">
+            <option value="BF">🇧🇫 +226</option>
+            <option value="CI">🇨🇮 +225</option>
+            <option value="ML">🇲🇱 +223</option>
+            <option value="SN">🇸🇳 +221</option>
+            <option value="NE">🇳🇪 +227</option>
+            +228</option>
+            <option value="CM">🇨🇲 +237</option>
+          </select>
+          <input type="tel" id="reg-phone" placeholder="Saisissez votre numéro de téléphone" oninput="checkRegForm()" style="background: transparent; border: none; outline: none; width: 100%; padding: 12px 0; font-size: 15px; color: #ffffff;">
+        </div>
+
+        <!-- Mot de passe -->
+        <div style="background-color: #171f2e; border-radius: 14px; display: flex; align-items: center; padding: 4px 14px; margin-bottom: 14px; border: 1px solid #232d42;">
+          <input type="password" id="reg-pass" placeholder="Mot de passe" oninput="checkRegForm()" style="background: transparent; border: none; outline: none; width: 100%; padding: 12px 0; font-size: 15px; color: #ffffff;">
+          <span onclick="togglePassword('reg-pass', this)" style="cursor: pointer; color: #9ca3af; padding: 4px; font-size: 15px;">👁️</span>
+        </div>
+
+        <!-- Confirmation mot de passe -->
+        <div style="background-color: #171f2e; border-radius: 14px; display: flex; align-items: center; padding: 4px 14px; margin-bottom: 14px; border: 1px solid #232d42;">
+          <input type="password" id="reg-confirm-pass" placeholder="Saisissez à nouveau le mot de passe" oninput="checkRegForm()" style="background: transparent; border: none; outline: none; width: 100%; padding: 12px 0; font-size: 15px; color: #ffffff;">
+          <span onclick="togglePassword('reg-confirm-pass', this)" style="cursor: pointer; color: #9ca3af; padding: 4px; font-size: 15px;">👁️</span>
+        </div>
+
+        <!-- Code d'invitation -->
+        <div style="background-color: #171f2e; border-radius: 14px; display: flex; align-items: center; padding: 4px 14px; margin-bottom: 24px; border: 1px solid #232d42;">
+          <input type="text" id="reg-code" placeholder="Code d'invitation" style="background: transparent; border: none; outline: none; width: 100%; padding: 12px 0; font-size: 15px; color: #ffffff;">
+        </div>
+
+        <button id="reg-btn" onclick="handleRegister()" style="width: 100%; background-color: #374151; color: #9ca3af; border: none; padding: 15px; border-radius: 30px; font-weight: 700; font-size: 16px; cursor: pointer; text-align: center; margin-bottom: 20px; transition: background 0.2s, color 0.2s;">S'inscrire</button>
+
+        <div style="text-align: center; margin-top: 15px;">
+          <span onclick="toggleAuthMode('login')" style="color: #a78bfa; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none;">Aller à la connexion ></span>
+        </div>
+      </div>
+
+      <!-- FORMULAIRE DE CONNEXION -->
+      <div id="login-container" style="display: none;">
+        <!-- Numéro de téléphone -->
+        <div style="background-color: #171f2e; border-radius: 14px; display: flex; align-items: center; padding: 4px 14px; margin-bottom: 14px; border: 1px solid #232d42;">
+          <select id="login-country" onchange="updateAuthForm('login')" style="background: transparent; border: none; outline: none; color: #a78bfa; font-weight: 700; font-size: 15px; margin-right: 10px; cursor: pointer;">
+            <option value="BF">🇧🇫 +226</option>
+            <option value="CI">🇨🇮 +225</option>
+            <option value="ML">🇲🇱 +223</option>
+            <option value="SN">🇸🇳 +221</option>
+            <option value="NE">🇳🇪 +227</option>
+             +228</option>
+            <option value="CM">🇨🇲 +237</option>
+          </select>
+          <input type="tel" id="login-phone" placeholder="Saisissez votre numéro de téléphone" oninput="checkLoginForm()" style="background: transparent; border: none; outline: none; width: 100%; padding: 12px 0; font-size: 15px; color: #ffffff;">
+        </div>
+
+        <!-- Mot de passe -->
+        <div style="background-color: #171f2e; border-radius: 14px; display: flex; align-items: center; padding: 4px 14px; margin-bottom: 24px; border: 1px solid #232d42;">
+          <input type="password" id="login-pass" placeholder="Mot de passe" oninput="checkLoginForm()" style="background: transparent; border: none; outline: none; width: 100%; padding: 12px 0; font-size: 15px; color: #ffffff;">
+          <span onclick="togglePassword('login-pass', this)" style="cursor: pointer; color: #9ca3af; padding: 4px; font-size: 15px;">👁️</span>
+        </div>
+
+        <button id="login-btn" onclick="handleLogin()" style="width: 100%; background-color: #374151; color: #9ca3af; border: none; padding: 15px; border-radius: 30px; font-weight: 700; font-size: 16px; cursor: pointer; text-align: center; margin-bottom: 20px; transition: background 0.2s, color 0.2s;">Se connecter</button>
+
+        <div style="text-align: center; margin-top: 15px;">
+          <span onclick="toggleAuthMode('register')" style="color: #a78bfa; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none;">Aller à l'inscription ></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- PAGE ACCUEIL MISES À JOUR -->
+    <div id="accueil" class="page">
+      <!-- 1. Bannière d'en-tête avec les actions rapides superposées comme sur la capture -->
+      <div style="position: relative; margin-bottom: 40px;">
+        <div style="width: 100%; height: 165px; border-radius: 16px; overflow: hidden; border: 1px solid #1f2937;">
+          <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500" alt="Banner" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+
+        <!-- 2. Actions Rapides (Dépôt, Retrait, Aide, Pointage) chevauchant la bannière -->
+        <div class="action-row" style="position: absolute; bottom: -28px; left: 12px; right: 12px; width: auto; margin-bottom: 0; box-shadow: 0 10px 25px rgba(0,0,0,0.6); background-color: rgba(17, 24, 39, 0.92); backdrop-filter: blur(6px);">
+          <div class="action-card" onclick="ouvrirSousPage('rechargeur-page')">
+            <div class="action-icon-box icon-recharge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="12" y1="9" x2="12" y2="15"></line><line x1="9" y1="12" x2="15" y2="12"></line></svg>
+            </div>
+            <div class="action-title">Dépôt</div>
+          </div>
+
+          <div class="action-card" onclick="ouvrirSousPage('retrait-page')">
+            <div class="action-icon-box icon-retrait">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            </div>
+            <div class="action-title">Retrait</div>
+          </div>
+
+          <div class="action-card" onclick="ouvrirService()">
+            <div class="action-icon-box icon-service">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"></path><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
+            </div>
+            <div class="action-title">Aide</div>
+          </div>
+
+          <div class="action-card" onclick="ouvrirModalArgentGratuit()">
+            <div class="action-icon-box icon-gratuit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <div class="action-title">Pointage</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Ticker Bar (avec cloche 🔔) -->
+      <div class="ticker-bar">
+        <span>🔔</span>
+        <span id="ticker-text">Chargement des dépôts récents...</span>
+      </div>
+
+      <!-- Bloc Solde Disponible & Solde Cumulé -->
+      <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #7c3aed; border-radius: 16px; padding: 18px; margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+        <div style="display: flex; flex-direction: column;">
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Solde Disponible</span>
+          <span id="accueil-solde-dispo" style="font-size: 18px; font-weight: 800; color: #ffffff;">FCFA 1,200</span>
+        </div>
+        <div style="display: flex; flex-direction: column; border-left: 1px solid #2d3748; padding-left: 12px;">
+          <span style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Solde Cumulé</span>
+          <span id="accueil-solde-cumule" style="font-size: 18px; font-weight: 800; color: #10b981;">FCFA 0</span>
+        </div>
+      </div>
+
+      <!-- 4. Section Aperçu -->
+      <div style="background-color: #111827; border: 1px solid #7c3aed; border-radius: 16px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+        <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); padding: 10px 16px; font-size: 15px; font-weight: 800; color: #ffffff;">
+          Aperçu
+        </div>
+        <div style="padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div style="height: 115px; border-radius: 12px; overflow: hidden; background: #1a2234; position: relative;">
+            <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500" alt="Aperçu 1" style="width: 100%; height: 100%; object-fit: cover;">
+          </div>
+          <div style="height: 115px; border-radius: 12px; overflow: hidden; background: #1a2234; position: relative; display: flex; align-items: center; justify-content: center;">
+            <img src="https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=500" alt="Aperçu 2" style="width: 100%; height: 100%; object-fit: cover; filter: brightness(0.7);">
+            <span style="position: absolute; font-size: 26px; font-weight: 800; color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">500</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOUS-PAGE RECHARGEUR / DÉPÔT -->
+    <div id="rechargeur-page" class="page">
+      <div class="page-header">
+        <div class="header-left">
+          <button class="back-btn" onclick="ouvrirSousPage('accueil')">❮</button>
+          <div class="page-title">Recharger</div>
+        </div>
+        <div class="header-right-icon" onclick="afficherAlerte('Le dépôt minimum est de 3 000 FCFA.')">i</div>
+      </div>
+
+      <div class="form-card">
+        <span class="form-label" style="font-weight: 700; color: #ffffff; font-size: 14px;">Montant de la recharge <span style="font-weight: normal; color: #9ca3af; font-size: 12px;">(Minimum 3 000 FCFA)</span></span>
+
+        <div class="preset-grid" style="grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px;">
+          <div class="preset-btn active" onclick="setMontantRecharge(3000, this)">3000</div>
+          <div class="preset-btn" onclick="setMontantRecharge(7000, this)">7000</div>
+          <div class="preset-btn" onclick="setMontantRecharge(12000, this)">12000</div>
+          <div class="preset-btn" onclick="setMontantRecharge(25000, this)">25000</div>
+          <div class="preset-btn" onclick="setMontantRecharge(40000, this)">40000</div>
+          <div class="preset-btn" onclick="setMontantRecharge(750000, this)">75000</div>
+        </div>
+
+        <div style="display: flex; align-items: center; background: #1f2937; border: 1px solid #374151; border-radius: 10px; padding: 0 14px; margin-bottom: 16px;">
+          <span style="font-weight: 700; color: #ffffff; font-size: 14px; margin-right: 10px;">FCFA</span>
+          <input type="number" class="input-box" id="recharge-amount" placeholder="Veuillez saisir le montant de la recha..." value="3000" min="3000" style="border: none; margin-bottom: 0; background: transparent; padding: 12px 0;">
+        </div>
+
+        <span class="form-label" style="font-weight: 700; color: #ffffff; font-size: 14px; margin-bottom: 8px;">Méthode de recharge</span>
+        
+        <div style="background-color: #374151; border: 1px solid #4b5563; border-radius: 10px; padding: 14px; text-align: center; font-weight: 600; color: #ffffff; font-size: 14px; margin-bottom: 20px; cursor: pointer;">
+          Recharger le canal 1
+        </div>
+
+        <button class="submit-btn" style="background-color: #dc2626; color: #ffffff; border-radius: 12px; padding: 14px; font-weight: 700; font-size: 15px; width: 100%; border: none; cursor: pointer; margin-bottom: 20px;" onclick="ouvrirGopayPleinEcran()">Rechargez maintenant</button>
+
+        <div class="method-grid" style="margin-bottom: 16px;">
+          <div class="method-btn active" onclick="selectCountry('BF', '+226', this)">🇧🇫 Burkina Faso</div>
+          <div class="method-btn" onclick="selectCountry('CI', '+225', this)">🇨🇮 Côte d'Ivoire</div>
+          <div class="method-btn" onclick="selectCountry('ML', '+223', this)">🇲🇱 Mali</div>
+          
+          <div class="method-btn" onclick="selectCountry('CM', '+237', this)">🇨🇲 Cameroun</div>
+        </div>
+
+        <div style="font-size: 13px; color: #9ca3af; line-height: 1.5;">
+          <div style="font-weight: 700; color: #ffffff; margin-bottom: 6px;">Instructions de recharge</div>
+          <ol style="margin: 0; padding-left: 18px;">
+            <li style="margin-bottom: 6px;">Le dépôt minimum est de 3 000 FCFA. Les dépôts inférieurs à ce montant ne seront pas crédités.</li>
+            <li>Veuillez bien vérifier votre numéro de téléphone avant de valider.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOUS-PAGE RETRAIT -->
+    <div id="retrait-page" class="page">
+      <div class="page-header">
+        <div class="header-left">
+          <button class="back-btn" onclick="ouvrirSousPage('accueil')">❮</button>
+          <div class="page-title">Retrait</div>
+        </div>
+        <div class="header-right-icon" onclick="ouvrirRetraitHistory()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+        </div>
+      </div>
+
+      <div style="width: 100%; height: 160px; border-radius: 16px; overflow: hidden; position: relative; margin-bottom: 20px; border: 1px solid #1f2937;">
+        <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=500" alt="Desert Banner" style="width: 100%; height: 100%; object-fit: cover; filter: brightness(0.85);">
+        <div style="position: absolute; top: 16px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">
+          <span style="font-size: 12px; color: #ffffff; font-weight: 700; margin-bottom: 2px;">Solde du compte</span>
+          <span id="retrait-solde-display" style="font-size: 24px; font-weight: 800; color: #ffffff;">FCFA 2,200</span>
+        </div>
+      </div>
+
+      <div class="retrait-section-title">Compte de retrait</div>
+      
+      <div class="bank-card-select" onclick="ouvrirModalCarte()">
+        <div class="bank-card-left" style="width: 100%; justify-content: space-between;">
+          <span id="display-user-name" style="font-size: 14px; font-weight: 600; color: #ffffff;">Sélectionnez le compte portefeuille de retrait</span>
+          <span style="color: #9ca3af; font-size: 16px;">❯</span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div class="retrait-section-title" style="margin-bottom: 0;">Montant du retrait</div>
+        <div style="font-size: 13px; color: #9ca3af; font-weight: 600;">Impôt: 22%</div>
+      </div>
+      
+      <div class="amount-input-wrapper">
+        <span class="currency-symbol">FCFA</span>
+        <input type="number" id="retrait-input-val" class="retrait-amount-input" placeholder="Veuillez choisir le montant du retrait" oninput="calculerFraisRetrait(this.value)">
+      </div>
+
+      <div class="retrait-fee-row" style="background-color: #111827; border-radius: 0 0 12px 12px; padding: 12px 16px; margin-top: -12px; margin-bottom: 24px; border-top: 1px solid #1f2937;">
+        <span>Montant reçu : FCFA <span id="montant-net-recu">0.00</span></span>
+        <span style="color: #f59e0b; font-weight: 600;">( Minimum FCFA 1,200 )</span>
+      </div>
+
+      <button class="retrait-confirm-btn" onclick="soumettreRetrait()">Retirer de l'argent maintenant</button>
+
+      <div class="retrait-instructions">
+        <div class="retrait-instruction-item">1. Montant minimum de retrait : 1 200 FCFA.</div>
+        <div class="retrait-instruction-item">2. Les frais de retrait s'élèvent à 22 % du montant retiré.</div>
+        <div class="retrait-instruction-item">3. Vous pouvez effectuer des retraits à tout moment. Les retraits sont disponibles sous 4 à 24 heures.</div>
+        <div class="retrait-instruction-item">4. Afin de protéger les intérêts de la plateforme et de ses membres, vous devez acheter au moins un pack VIP pour pouvoir effectuer un retrait.</div>
+      </div>
+    </div>
+
+    <!-- SOUS-PAGE MODIFIER LE MOT DE PASSE -->
+    <div id="password-page" class="page">
+      <div class="page-header">
+        <div class="header-left">
+          <button class="back-btn" onclick="ouvrirSousPage('moi')">❮</button>
+          <div class="page-title">Modifier le mot de passe</div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <span class="form-label">Ancien mot de passe</span>
+        <input type="password" class="input-box" id="old-pass" placeholder="Saisir l'ancien mot de passe">
+
+        <span class="form-label">Nouveau mot de passe</span>
+        <input type="password" class="input-box" id="new-pass" placeholder="Saisir le nouveau mot de passe (min. 4 caractères)">
+
+        <span class="form-label">Confirmer le nouveau mot de passe</span>
+        <input type="password" class="input-box" id="confirm-new-pass" placeholder="Confirmer le nouveau mot de passe">
+
+        <button class="submit-btn" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: #fff;" onclick="changerMotDePasse()">METTRE À JOUR</button>
+      </div>
+    </div>
+
+    <!-- SOUS-PAGE RÈGLEMENT DE LA PLATEFORME -->
+    <div id="reglement-page" class="page">
+      <div class="page-header">
+        <div class="header-left">
+          <button class="back-btn" onclick="ouvrirSousPage('moi')">❮</button>
+          <div class="page-title">Règlement de la plateforme</div>
+        </div>
+      </div>
+
+      <div class="form-card" style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+        <h3 style="color: #a78bfa; margin-top: 0;">1. Conditions d'Utilisation et Inscription</h3>
+        <p>Chaque membre s'engage à fournir des informations de compte véridiques. La création de comptes multiples en vue de manipuler le système de parrainage est strictement interdite et peut entraîner la suspension des fonds.</p>
+
+        <h3 style="color: #a78bfa;">2. Règlements des Dépôts</h3>
+        <p>Le montant minimum de recharge est fixé à <strong>3 000 FCFA</strong>. Veillez à bien copier les informations de transaction ou à utiliser le service de paiement mobile officiel pour éviter toute perte de fonds.</p>
+
+        <h3 style="color: #a78bfa;">3. Politique de Retrait</h3>
+        <p>Les retraits sont ouverts tous les jours. Un taux de frais de service de <strong>22%</strong> est appliqué sur chaque transaction de retrait. Les fonds sont généralement versés sur votre compte mobile money sous 4 à 24 heures.</p>
+
+        <h3 style="color: #a78bfa;">4. Sécurité et Confidentialité</h3>
+        <p>Vous êtes responsable de la sécurité de vos identifiants. Ne partagez jamais votre mot de passe ou vos codes de validation avec des tiers, y compris le support technique.</p>
+      </div>
+    </div>
+
+    <!-- SOUS-PAGE À PROPOS DE NOUS -->
+    <div id="apropos-page" class="page">
+      <div class="page-header">
+        <div class="header-left">
+          <button class="back-btn" onclick="ouvrirSousPage('moi')">❮</button>
+          <div class="page-title">À propos de nous</div>
+        </div>
+      </div>
+
+      <div class="form-card" style="font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+        <h3 style="color: #a78bfa; margin-top: 0;">xxsof Investissement</h3>
+        <p>xxsof est une plateforme numérique d'investissement de premier plan, conçue pour dynamiser la croissance économique et offrir des opportunités de rentabilité financière durables aux utilisateurs à travers l'Afrique de l'Ouest (Burkina Faso, Côte d'Ivoire, Mali, Sénégal, Niger).</p>
+
+        <h3 style="color: #a78bfa;">Notre Vision</h3>
+        <p>Démocratiser l'accès aux investissements sécurisés grâce aux technologies financières mobiles modernes (Orange Money, Moov Money, Wave, Airtel Money), tout en garantissant une transparence totale et un accompagnement de qualité.</p>
+
+        <h3 style="color: #a78bfa;">Engagement et Support</h3>
+        <p>Notre équipe technique et nos agents d'assistance sont mobilisés 24h/24 et 7j/7 pour vous assister dans vos démarches, répondre à vos questions et veiller à la fluidité de vos transactions financières.</p>
+      </div>
+    </div>
+
+    <!-- SOUS-PAGE SERVICE & ASSISTANCE -->
+    <div id="service-page" class="page">
+      <div class="page-header">
+        <div class="header-left">
+          <button class="back-btn" onclick="ouvrirSousPage('accueil')">❮</button>
+          <div class="page-title">Service client</div>
+        </div>
+      </div>
+
+      <div style="width: 100%; height: 165px; border-radius: 16px; overflow: hidden; border: 1px solid #1f2937; margin-bottom: 14px;">
+        <img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=500" alt="Service Banner" style="width: 100%; height: 100%; object-fit: cover;">
+      </div>
+
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%); border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);">
+        <div style="font-size: 26px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">9:00-19:00</div>
+        <div style="font-size: 13px; color: #fecaca; font-weight: 600;">Horaires du service client</div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div onclick="ouvrirTelegram('https://t.me/Nnnjkhr')" style="background: #ffffff; border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 40px; height: 40px; background: #0088cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.99 1.27-5.62 3.72-.53.36-1.01.54-1.44.53-.47-.02-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.25.38-.51 1.05-.78 4.11-1.79 6.85-2.97 8.22-3.55 3.91-1.67 4.72-1.96 5.25-1.97.12 0 .39.03.56.17.15.12.19.28.21.4-.01.07.01.2 0 .3z"></path></svg>
+            </div>
+            <span style="font-size: 15px; font-weight: 700; color: #111827;">Telegram</span>
+          </div>
+          <span style="color: #9ca3af; font-size: 18px; font-weight: bold;">❯</span>
+        </div>
+
+        <div onclick="ouvrirTelegram('https://t.me/+FWHEa1mko645MWY0')" style="background: #ffffff; border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 40px; height: 40px; background: #0088cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.99 1.27-5.62 3.72-.53.36-1.01.54-1.44.53-.47-.02-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.25.38-.51 1.05-.78 4.11-1.79 6.85-2.97 8.22-3.55 3.91-1.67 4.72-1.96 5.25-1.97.12 0 .39.03.56.17.15.12.19.28.21.4-.01.07.01.2 0 .3z"></path></svg>
+            </div>
+            <span style="font-size: 15px; font-weight: 700; color: #111827;">Chaîne Telegram</span>
+          </div>
+          <span style="color: #9ca3af; font-size: 18px; font-weight: bold;">❯</span>
+        </div>
+
+        <div onclick="ouvrirTelegram('https://t.me/+Rdpxs3rimFQ5Y2E0')" style="background: #ffffff; border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 40px; height: 40px; background: #0088cc; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.99 1.27-5.62 3.72-.53.36-1.01.54-1.44.53-.47-.02-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.25.38-.51 1.05-.78 4.11-1.79 6.85-2.97 8.22-3.55 3.91-1.67 4.72-1.96 5.25-1.97.12 0 .39.03.56.17.15.12.19.28.21.4-.01.07.01.2 0 .3z"></path></svg>
+            </div>
+            <span style="font-size: 15px; font-weight: 700; color: #111827;">Groupe Telegram</span>
+          </div>
+          <span style="color: #9ca3af; font-size: 18px; font-weight: bold;">❯</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE ÉQUIPE -->
+    <div id="equipe" class="page">
+      <div style="background: #dc2626; border-radius: 12px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <span style="font-size: 18px; font-weight: 800; color: #fff; letter-spacing: 1px;">xxsof</span>
+        <button style="background: #dc2626; border: 1px solid #ffffff; color: #fff; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;" onclick="ouvrirSousPage('team-details-page')">Mon équipe ></button>
+      </div>
+
+      <div style="background: #ffffff; color: #111827; border-radius: 16px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 14px;">
+          <div>
+            <div id="invite-code" style="font-size: 18px; font-weight: 800; color: #111827; margin-bottom: 2px;">------</div>
+            <div style="font-size: 12px; color: #dc2626; font-weight: 700;">Code d'invitation</div>
+          </div>
+          <button style="background: #dc2626; color: #ffffff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer;" onclick="copierTexte(document.getElementById('invite-code').innerText)">Copier le code</button>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="max-width: 65%;">
+            <div id="invite-link" style="font-size: 11px; color: #4b5563; word-break: break-all; margin-bottom: 2px; line-height: 1.3; max-height: 2.6em; overflow: hidden;">------</div>
+            <div style="font-size: 12px; color: #dc2626; font-weight: 700;">Lien d'invitation</div>
+          </div>
+          <button style="background: #dc2626; color: #ffffff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer;" onclick="copierTexte(document.getElementById('invite-link').innerText)">Copier le lien</button>
+        </div>
+      </div>
+
+      <div style="background: #111827; border: 1px solid #1f2937; border-radius: 16px; overflow: hidden; margin-bottom: 16px;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; background: #1f2937; padding: 12px 16px; font-size: 12px; font-weight: 700; color: #9ca3af;">
+          <div>Taux de commission</div>
+          <div style="text-align: center;">Nombre d'invités</div>
+          <div style="text-align: right;">Revenu</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; padding: 14px 16px; border-bottom: 1px solid #1f2937; font-size: 13px; align-items: center; color: #fff;">
+          <div>Équipe de niveau 1 30%</div>
+          <div id="card-count-1" style="text-align: center; font-weight: 700;">0</div>
+          <div id="card-reward-1" style="text-align: right; font-weight: 700; color: #10b981;">0</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; padding: 14px 16px; border-bottom: 1px solid #1f2937; font-size: 13px; align-items: center; color: #fff;">
+          <div>Équipe de niveau 2 2%</div>
+          <div id="card-count-2" style="text-align: center; font-weight: 700;">0</div>
+          <div id="card-reward-2" style="text-align: right; font-weight: 700; color: #10b981;">0</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; padding: 14px 16px; font-size: 13px; align-items: center; color: #fff;">
+          <div>Équipe de niveau 3 1%</div>
+          <div id="card-count-3" style="text-align: center; font-weight: 700;">0</div>
+          <div id="card-reward-3" style="text-align: right; font-weight: 700; color: #10b981;">0</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+        <div style="background: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 18px; text-align: center;">
+          <div id="team-total-count-bottom" style="font-size: 20px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">0</div>
+          <div style="font-size: 12px; color: #9ca3af; font-weight: 600;">Nombre d'invités</div>
+        </div>
+        <div style="background: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 18px; text-align: center;">
+          <div id="team-total-revenue-bottom" style="font-size: 20px; font-weight: 800; color: #10b981; margin-bottom: 4px;">FCFA 0</div>
+          <div style="font-size: 12px; color: #9ca3af; font-weight: 600;">Revenus sur invitation</div>
+        </div>
+      </div>
+
+      <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 16px; margin-bottom: 20px; font-size: 12px; color: #9ca3af; line-height: 1.5;">
+        <div style="font-weight: 700; color: #ffffff; margin-bottom: 6px;">Règles de l'équipe et commissions</div>
+        <ol style="margin: 0; padding-left: 18px;">
+          <li style="margin-bottom: 6px;">Invitez vos amis à rejoindre la plateforme en partageant votre lien ou code d'invitation.</li>
+          <li style="margin-bottom: 6px;">Gagnez des commissions sur les recharges de votre réseau sur 3 niveaux (Niveau 1 : 30%, Niveau 2 : 2%, Niveau 3 : 1%).</li>
+          <li>Les revenus de parrainage s'accumulent et peuvent être utilisés ou retirés selon les règles de la plateforme.</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- SOUS-PAGE : VOIR TOUTE L'ÉQUIPE -->
+    <div id="team-details-page" class="page">
+      <div class="page-header" style="margin-bottom: 12px;">
+        <div class="header-left">
+          <button class="back-btn" onclick="ouvrirSousPage('equipe')">❮</button>
+          <div class="page-title">Mon équipe</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; border-bottom: 1px solid #1f2937; margin-bottom: 16px; background: #111827; border-radius: 12px; padding: 10px 4px; border: 1px solid #1f2937;">
+        <div id="tab-btn-1" onclick="filtrerEquipeTab('1', this)" style="padding: 8px 4px; cursor: pointer; border-bottom: 2px solid #8b5cf6; transition: all 0.2s;">
+          <div id="team-tab-rev-1" style="font-size: 14px; font-weight: 800; color: #10b981; margin-bottom: 2px;">0.00</div>
+          <div id="team-tab-label-1" style="font-size: 11px; color: #9ca3af; font-weight: 600;">Niveau 1(0)</div>
+        </div>
+        <div id="tab-btn-2" onclick="filtrerEquipeTab('2', this)" style="padding: 8px 4px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;">
+          <div id="team-tab-rev-2" style="font-size: 14px; font-weight: 800; color: #10b981; margin-bottom: 2px;">0.00</div>
+          <div id="team-tab-label-2" style="font-size: 11px; color: #9ca3af; font-weight: 600;">Niveau 2(0)</div>
+        </div>
+        <div id="tab-btn-3" onclick="filtrerEquipeTab('3', this)" style="padding: 8px 4px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;">
+          <div id="team-tab-rev-3" style="font-size: 14px; font-weight: 800; color: #10b981; margin-bottom: 2px;">0.00</div>
+          <div id="team-tab-label-3" style="font-size: 11px; color: #9ca3af; font-weight: 600;">Niveau 3(0)</div>
+        </div>
+      </div>
+
+      <div id="team-list-container" style="display: flex; flex-direction: column; gap: 16px;"></div>
+    </div>
+
+    <!-- SOUS-PAGE : MES PRODUITS -->
+    <div id="mes-produits-page" class="page">
+      <div class="page-header">
+        <div class="header-left">
+          <button class="back-btn" onclick="ouvrirSousPage('commande')">❮</button>
+          <div class="page-title">Mes Produits</div>
+        </div>
+      </div>
+
+      <div style="width: 100%; height: 180px; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid #1f2937;">
+        <img src="https://images.unsplash.com/photo-1563720223185-11003d516935?w=500" alt="Banner" style="width: 100%; height: 100%; object-fit: cover;">
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px;">
+        <div style="background: linear-gradient(135deg, #dc2626 0%, #450a0a 100%); border-radius: 16px; padding: 18px 14px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.2);">
+          <span style="font-size: 13px; color: #fecaca; margin-bottom: 8px; font-weight: 500;">Quantité achetée</span>
+          <span id="mes-produits-qty-val" style="font-size: 26px; font-weight: 800; color: #ffffff;">0</span>
+        </div>
+        <div style="background: linear-gradient(135deg, #dc2626 0%, #450a0a 100%); border-radius: 16px; padding: 18px 14px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.2);">
+          <span style="font-size: 13px; color: #fecaca; margin-bottom: 8px; font-weight: 500;">Mes revenus</span>
+          <span id="mes-produits-rev-val" style="font-size: 20px; font-weight: 800; color: #ffffff;">FCFA 0</span>
+        </div>
+      </div>
+
+      <div id="mes-produits-contenu-liste" style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="text-align: center; color: #9ca3af; font-size: 14px; margin-top: 40px;">
+          Vous n'avez pas acheté de produit
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE COMMANDES / INVESTISSEMENTS -->
+    <div id="commande" class="page">
+      <div class="page-header">
+        <div class="page-title">xxsof - Packs VIP & Investissement</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        
+        <div onclick="ouvrirMesProduitsPage()" style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 14px 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0;">
+          <div style="width: 42px; height: 42px; background-color: #7c3aed; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0; flex: 1;">
+            <span id="commande-produits-count" style="font-size: 18px; font-weight: 800; color: #ffffff; line-height: 1.2; text-overflow: ellipsis; overflow: hidden;">0</span>
+            <span style="font-size: 11px; color: #9ca3af; font-weight: 600; white-space: nowrap; margin-top: 2px;">Mes produits ></span>
+          </div>
+        </div>
+
+        <div onclick="afficherAlerte('Revenus totaux cumulés de vos investissements.')" style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 14px 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0;">
+          <div style="width: 42px; height: 42px; background-color: #7c3aed; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"></ellipse><path d="M4 6v6c0 1.66 3.58 3 8 3s8-1.34 8-3V6"></path><path d="M4 12v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"></path><path d="M12 2v2"></path><path d="M16 3l-1 1"></path><path d="M8 3l1 1"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0; flex: 1;">
+            <span id="commande-total-revenus-val" style="font-size: 14px; font-weight: 800; color: #ffffff; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">FCFA 0</span>
+            <span style="font-size: 11px; color: #9ca3af; font-weight: 600; white-space: nowrap; margin-top: 2px;">Mes revenus ></span>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+        
+        <!-- VIP 1 -->
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+          <div>
+            <div style="position: absolute; top: 20px; right: 20px; background-color: #065f46; color: #34d399; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; z-index: 2;">90 Jours</div>
+            <div style="font-size: 14px; font-weight: 800; color: #facc15; text-align: center; margin-bottom: 8px;">VIP 1</div>
+            <div style="width: 100%; height: 95px; border-radius: 10px; overflow: hidden; background: #1a2234; margin-bottom: 10px;">
+              <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=500" alt="VIP1" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 2px;">Quotidien : <span style="color: #ef4444; font-weight: 700;">450 FCFA</span></div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 12px;">Total : <span style="color: #ef4444; font-weight: 700;">40,500 FCFA</span></div>
+          </div>
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">3,000 F</div>
+            <button onclick="preparerAchatProduit('VIP 1 1', 3000, 450, 40500, 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=500')" style="width: 100%; background-color: #ef4444; color: #ffffff; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-align: center;">ACHETER</button>
+          </div>
+        </div>
+
+        <!-- VIP 2 -->
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+          <div>
+            <div style="position: absolute; top: 20px; right: 20px; background-color: #065f46; color: #34d399; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; z-index: 2;">90 Jours</div>
+            <div style="font-size: 14px; font-weight: 800; color: #facc15; text-align: center; margin-bottom: 8px;">VIP 2 xxsof OpenRun 2</div>
+            <div style="width: 100%; height: 95px; border-radius: 10px; overflow: hidden; background: #1a2234; margin-bottom: 10px;">
+              <img src="https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=500" alt="VIP2" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 2px;">Quotidien : <span style="color: #ef4444; font-weight: 700;">1,435 FCFA</span></div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 12px;">Total : <span style="color: #ef4444; font-weight: 700;">215,250 FCFA</span></div>
+          </div>
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">7,000 F</div>
+            <button onclick="preparerAchatProduit('VIP 2 xxsof OpenRun 2', 7000, 1435, 215250, 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=500')" style="width: 100%; background-color: #ef4444; color: #ffffff; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-align: center;">ACHETER</button>
+          </div>
+        </div>
+
+        <!-- VIP 3 -->
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+          <div>
+            <div style="position: absolute; top: 20px; right: 20px; background-color: #065f46; color: #34d399; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; z-index: 2;">90 Jours</div>
+            <div style="font-size: 15px; font-weight: 800; color: #facc15; text-align: center; margin-bottom: 8px;">VIP 3</div>
+            <div style="width: 100%; height: 95px; border-radius: 10px; overflow: hidden; background: #1a2234; margin-bottom: 10px;">
+              <img src="https://images.unsplash.com/photo-1558449028-b53a39d100fc?w=500" alt="VIP3" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 2px;">Quotidien : <span style="color: #ef4444; font-weight: 700;">2,500 FCFA</span></div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 12px;">Total : <span style="color: #ef4444; font-weight: 700;">225,000 FCFA</span></div>
+          </div>
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">12,000 F</div>
+            <button onclick="preparerAchatProduit('VIP 3', 12000, 2500, 225000, 'https://images.unsplash.com/photo-1558449028-b53a39d100fc?w=500')" style="width: 100%; background-color: #ef4444; color: #ffffff; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-align: center;">ACHETER</button>
+          </div>
+        </div>
+
+        <!-- VIP 4 -->
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+          <div>
+            <div style="position: absolute; top: 20px; right: 20px; background-color: #065f46; color: #34d399; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; z-index: 2;">90 Jours</div>
+            <div style="font-size: 15px; font-weight: 800; color: #facc15; text-align: center; margin-bottom: 8px;">VIP 4</div>
+            <div style="width: 100%; height: 95px; border-radius: 10px; overflow: hidden; background: #1a2234; margin-bottom: 10px;">
+              <img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=500" alt="VIP4" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 2px;">Quotidien : <span style="color: #ef4444; font-weight: 700;">6,000 FCFA</span></div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 12px;">Total : <span style="color: #ef4444; font-weight: 700;">540,000 FCFA</span></div>
+          </div>
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">25,000 F</div>
+            <button onclick="preparerAchatProduit('VIP 4', 25000, 6000, 540000, 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=500')" style="width: 100%; background-color: #ef4444; color: #ffffff; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-align: center;">ACHETER</button>
+          </div>
+        </div>
+
+        <!-- VIP 5 (Mis en Indisponible) -->
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+          <div>
+            <div style="position: absolute; top: 20px; right: 20px; background-color: #7f1d1d; color: #fca5a5; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; z-index: 2;">Indisponible</div>
+            <div style="font-size: 15px; font-weight: 800; color: #facc15; text-align: center; margin-bottom: 8px;">VIP 5</div>
+            <div style="width: 100%; height: 95px; border-radius: 10px; overflow: hidden; background: #1a2234; margin-bottom: 10px;">
+              <img src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500" alt="VIP5" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 2px;">Quotidien : <span style="color: #ef4444; font-weight: 700;">10,500 FCFA</span></div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 12px;">Total : <span style="color: #ef4444; font-weight: 700;">945,000 FCFA</span></div>
+          </div>
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">40,000 F</div>
+            <button onclick="afficherAlerte('Ce pack VIP 5 est actuellement indisponible.')" style="width: 100%; background-color: #374151; color: #9ca3af; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-align: center;">INDISPONIBLE</button>
+          </div>
+        </div>
+
+        <!-- VIP 6 -->
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+          <div>
+            <div style="position: absolute; top: 20px; right: 20px; background-color: #7f1d1d; color: #fca5a5; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; z-index: 2;">Indisponible</div>
+            <div style="font-size: 15px; font-weight: 800; color: #facc15; text-align: center; margin-bottom: 8px;">VIP 6</div>
+            <div style="width: 100%; height: 95px; border-radius: 10px; overflow: hidden; background: #1a2234; margin-bottom: 10px;">
+              <img src="https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=500" alt="VIP6" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 2px;">Quotidien : <span style="color: #ef4444; font-weight: 700;">20,000 FCFA</span></div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 12px;">Total : <span style="color: #ef4444; font-weight: 700;">1,800,000 FCFA</span></div>
+          </div>
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">75,000 F</div>
+            <button onclick="afficherAlerte('Ce pack VIP 6 est actuellement indisponible.')" style="width: 100%; background-color: #374151; color: #9ca3af; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-align: center;">INDISPONIBLE</button>
+          </div>
+        </div>
+
+        <!-- VIP 7 -->
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+          <div>
+            <div style="position: absolute; top: 20px; right: 20px; background-color: #7f1d1d; color: #fca5a5; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; z-index: 2;">Indisponible</div>
+            <div style="font-size: 15px; font-weight: 800; color: #facc15; text-align: center; margin-bottom: 8px;">VIP 7</div>
+            <div style="width: 100%; height: 95px; border-radius: 10px; overflow: hidden; background: #1a2234; margin-bottom: 10px;">
+              <img src="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=500" alt="VIP7" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 2px;">Quotidien : <span style="color: #ef4444; font-weight: 700;">35,000 FCFA</span></div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 12px;">Total : <span style="color: #ef4444; font-weight: 700;">3,150,000 FCFA</span></div>
+          </div>
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">100,000 F</div>
+            <button onclick="afficherAlerte('Ce pack VIP 7 est actuellement indisponible.')" style="width: 100%; background-color: #374151; color: #9ca3af; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-align: center;">INDISPONIBLE</button>
+          </div>
+        </div>
+
+        <!-- VIP 8 -->
+        <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+          <div>
+            <div style="position: absolute; top: 20px; right: 20px; background-color: #7f1d1d; color: #fca5a5; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; z-index: 2;">Indisponible</div>
+            <div style="font-size: 15px; font-weight: 800; color: #facc15; text-align: center; margin-bottom: 8px;">VIP 8</div>
+            <div style="width: 100%; height: 95px; border-radius: 10px; overflow: hidden; background: #1a2234; margin-bottom: 10px;">
+              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500" alt="VIP8" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 2px;">Quotidien : <span style="color: #ef4444; font-weight: 700;">50,000 FCFA</span></div>
+            <div style="font-size: 12px; color: #9ca3af; margin-bottom: 12px;">Total : <span style="color: #ef4444; font-weight: 700;">4,500,000 FCFA</span></div>
+          </div>
+          <div>
+            <div style="font-size: 16px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">150,000 F</div>
+            <button onclick="afficherAlerte('Ce pack VIP 8 est actuellement indisponible.')" style="width: 100%; background-color: #374151; color: #9ca3af; border: none; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-align: center;">INDISPONIBLE</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    
+    <!-- PAGE MOI / COMPTE -->
+    <div id="moi" class="page">
+      <div style="background: linear-gradient(180deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%), url('https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500') center/cover; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #1f2937; position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+        <div style="font-size: 13px; color: #94a3b8; margin-bottom: 6px;">Numéro de téléphone</div>
+        <div style="font-size: 20px; font-weight: 800; color: #ffffff; margin-bottom: 16px;" id="moi-user-phone">+226 70****12</div>
+        <div style="font-size: 13px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase;">Solde du compte</div>
+        <div style="font-size: 26px; font-weight: 800; color: #ffffff;" id="moi-balance-display">FCFA 1,200</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <button onclick="ouvrirSousPage('rechargeur-page')" style="background: linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%); color: #ffffff; border: none; padding: 16px; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);">
+          Recharger
+        </button>
+        <button onclick="ouvrirSousPage('retrait-page')" style="background: linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%); color: #ffffff; border: none; padding: 16px; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);">
+          Retrait
+        </button>
+      </div>
+
+      <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; overflow: hidden; margin-bottom: 16px;">
+        <div onclick="ouvrirMesProduitsPage()" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #1f2937; cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">Détails du financement</span>
+          </div>
+          <span style="color: #6b7280; font-size: 16px;">❯</span>
+        </div>
+
+        <div onclick="ouvrirDepotHistory()" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #1f2937; cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">Historique des recharges</span>
+          </div>
+          <span style="color: #6b7280; font-size: 16px;">❯</span>
+        </div>
+
+        <div onclick="ouvrirRetraitHistory()" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #1f2937; cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">Registres de retrait</span>
+          </div>
+          <span style="color: #6b7280; font-size: 16px;">❯</span>
+        </div>
+
+        <div onclick="ouvrirModalCarte()" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">Gestion de compte bancaire</span>
+          </div>
+          <span style="color: #6b7280; font-size: 16px;">❯</span>
+        </div>
+      </div>
+
+      <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; overflow: hidden; margin-bottom: 20px;">
+        <div onclick="ouvrirSousPage('apropos-page')" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #1f2937; cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">À propos de nous</span>
+          </div>
+          <span style="color: #6b7280; font-size: 16px;">❯</span>
+        </div>
+
+        <div onclick="ouvrirSousPage('reglement-page')" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #1f2937; cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-0.5-0.5Z"></path><path d="M6 6h10"></path><path d="M6 10h10"></path></svg>
+            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">Règles de la plateforme</span>
+          </div>
+          <span style="color: #6b7280; font-size: 16px;">❯</span>
+        </div>
+
+        <div onclick="ouvrirService()" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid #1f2937; cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z"></path><path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
+            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">Service client</span>
+          </div>
+          <span style="color: #6b7280; font-size: 16px;">❯</span>
+        </div>
+
+        <div onclick="handleLogout()" style="display: flex; align-items: center; justify-content: space-between; padding: 16px; cursor: pointer;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            <span style="font-size: 14px; font-weight: 600; color: #ffffff;">Sortie sécurisée</span>
+          </div>
+          <span style="color: #6b7280; font-size: 16px;">❯</span>
+        </div>
+      </div>
+
+      <div id="admin-menu-btn" style="display: none; background-color: #111827; border: 1px solid #8b5cf6; border-radius: 16px; padding: 16px; align-items: center; justify-content: space-between; margin-bottom: 20px; cursor: pointer;" onclick="ouvrirAdminPage()">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span style="font-size: 14px; font-weight: 700; color: #a78bfa;">Panneau d'Administration</span>
+        </div>
+        <span style="color: #a78bfa; font-size: 16px;">❯</span>
+      </div>
+    </div>
+
+    <!-- SOUS-PAGE : PANNEAU ADMINISTRATEUR -->
+    <div id="admin-page" class="page">
+      <div class="page-header">
+        <div class="header-left">
+          <button class="back-btn" onclick="ouvrirSousPage('moi')">❮</button>
+          <div class="page-title">Panneau d'Administration</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto;">
+        <button class="preset-btn active" onclick="switchAdminTab('users', this)" style="flex: 1; white-space: nowrap;">Utilisateurs</button>
+        <button class="preset-btn" onclick="switchAdminTab('deposits', this)" style="flex: 1; white-space: nowrap;">Confirmer Dépôt</button>
+        <button class="preset-btn" onclick="switchAdminTab('withdrawals', this)" style="flex: 1; white-space: nowrap;">Confirmer Retrait</button>
+        <button class="preset-btn" onclick="switchAdminTab('messages', this)" style="flex: 1; white-space: nowrap;">Messages & Preuves</button>
+      </div>
+
+      <div id="admin-tab-users" class="admin-tab-content">
+        <div class="form-card" style="margin-bottom: 16px;">
+          <div style="font-size: 12px; color: #9ca3af; margin-bottom: 4px; text-transform: uppercase;">Total des inscrits</div>
+          <div id="admin-total-users" style="font-size: 24px; font-weight: 800; color: #a78bfa;">0</div>
+        </div>
+        <div style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 12px;">Liste des comptes utilisateurs</div>
+        <div id="admin-users-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+      </div>
+
+      <div id="admin-tab-deposits" class="admin-tab-content" style="display: none;">
+        <div style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 12px;">Demandes de dépôts en attente</div>
+        <div id="admin-deposits-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+      </div>
+
+      <div id="admin-tab-withdrawals" class="admin-tab-content" style="display: none;">
+        <div style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 12px;">Demandes de retraits en attente</div>
+        <div id="admin-withdrawals-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+      </div>
+
+      <div id="admin-tab-messages" class="admin-tab-content" style="display: none;">
+        <div style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 12px;">Messages et Preuves de paiement reçus</div>
+        <div id="admin-messages-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODALES -->
+  <div class="platform-modal" id="custom-alert-modal">
+    <div class="platform-modal-box" style="text-align: center;">
+      <div class="platform-modal-title" style="color: #a78bfa; font-size: 22px;">xxsof</div>
+      <div class="platform-modal-body" id="custom-alert-msg" style="font-size: 15px; color: #ffffff; margin: 15px 0;"></div>
+      <button class="platform-btn-close" onclick="fermerAlertePerso()">OK</button>
+    </div>
+  </div>
+
+  <!-- MODALE EXPLICATION / CONFIRMATION ACHAT PRODUIT -->
+  <div class="platform-modal" id="purchase-explanation-modal">
+    <div class="platform-modal-box">
+      <div class="platform-modal-title" id="purchase-modal-title" style="color: #a78bfa; font-size: 18px; margin-bottom: 10px;">Détails de l'investissement</div>
+      <div class="platform-modal-body" id="purchase-modal-body" style="font-size: 13px; color: #cbd5e1; line-height: 1.6; margin-bottom: 20px;">
+        <!-- Injecté dynamiquement -->
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="platform-btn-telegram" style="background: #374151; border-radius: 12px; padding: 14px;" onclick="fermerModalAchat()">Annuler</button>
+        <button class="platform-btn-close" style="flex: 1; margin: 0;" onclick="validerAchatProduit()">Confirmer l'achat</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="platform-modal" id="custom-confirm-modal">
+    <div class="platform-modal-box" style="text-align: center;">
+      <div class="platform-modal-title" style="color: #a78bfa; font-size: 22px;">xxsof</div>
+      <div class="platform-modal-body" id="custom-confirm-msg" style="font-size: 15px; color: #ffffff; margin: 15px 0;">Voulez-vous vraiment vous déconnecter ?</div>
+      <div style="display: flex; gap: 10px;">
+        <button class="platform-btn-telegram" style="background: #374151; border-radius: 12px; padding: 14px;" onclick="fermerConfirmation(false)">Annuler</button>
+        <button class="platform-btn-close" style="flex: 1; margin: 0;" onclick="fermerConfirmation(true)">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="platform-modal" id="platform-notification-modal">
+    <div class="platform-modal-box">
+      <div class="platform-modal-title" style="color: #dc2626;">Notification de la plateforme</div>
+      <div class="platform-modal-body">
+        <p>Bienvenue sur xxsof ! Profitez de nos offres d'investissement exclusives en Afrique de l'Ouest !</p>
+        <ol>
+          <li>Bonus d'inscription : 1 200 FCFA.</li>
+          <li>🚀 Gains quotidiens : 150F chaque jour.</li>
+          <li>Parrainez vos amis et recevez immédiatement 30 % de leur investissement.</li>
+          <li>Tous les produits sont rechargeables pour accumuler des gains.</li>
+          <li>Les gains générés par les produits sont automatiquement crédités sur votre compte 24 h/24 et 7 j/7 et peuvent être retirés à tout moment.</li>
+          <li>Rejoignez notre groupe Telegram pour en savoir plus sur les opportunités de gains !</li>
+        </ol>
+      </div>
+      <div class="platform-modal-btns">
+        <button class="platform-btn-telegram" onclick="ouvrirTelegram('https://t.me/+FWHEa1mko645MWY0')">Chaîne Telegram</button>
+        <button class="platform-btn-telegram" onclick="ouvrirTelegram('https://t.me/+Rdpxs3rimFQ5Y2E0')">Groupe Telegram</button>
+      </div>
+      <button class="platform-btn-close" onclick="fermerModalNotification()">aceder dans le plateforme</button>
+    </div>
+  </div>
+
+  <div class="fullscreen-modal" id="retrait-history-modal">
+    <div style="max-width: 480px; margin: auto;">
+      <div class="page-header" style="margin-bottom: 24px;">
+        <div class="header-left">
+          <button class="back-btn" onclick="fermerRetraitHistory()">❮</button>
+          <div class="page-title">Historique des retraits</div>
+        </div>
+      </div>
+      <div id="retrait-history-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+    </div>
+  </div>
+
+  <div class="fullscreen-modal" id="depot-history-modal">
+    <div style="max-width: 480px; margin: auto;">
+      <div class="page-header" style="margin-bottom: 24px;">
+        <div class="header-left">
+          <button class="back-btn" onclick="fermerDepotHistory()">❮</button>
+          <div class="page-title">Historique des recharges</div>
+        </div>
+      </div>
+      <div id="depot-history-list" style="display: flex; flex-direction: column; gap: 12px;"></div>
+    </div>
+  </div>
+
+  <div class="fullscreen-modal" id="gift-fullscreen-modal">
+    <div style="max-width: 480px; margin: auto;">
+      <div class="page-header" style="margin-bottom: 24px;">
+        <div class="header-left">
+          <button class="back-btn" onclick="fermerModalArgentGratuit()">❮</button>
+          <div class="page-title">Cadeau / Pointage Quotidien</div>
+        </div>
+      </div>
+
+      <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 20px; padding: 24px; text-align: center; margin-top: 20px;">
+        <div style="font-size: 55px; margin-bottom: 16px;">🎁</div>
+        <div style="font-size: 20px; font-weight: 800; color: #ffffff; margin-bottom: 8px;">Récompense Quotidienne</div>
+        <div style="font-size: 13px; color: #9ca3af; margin-bottom: 16px; line-height: 1.5;">
+          Appuyez sur le bouton ci-dessous pour recevoir votre montant quotidien directement dans votre solde disponible.
+        </div>
+
+        <div style="font-size: 13px; color: #9ca3af; margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 10px;">
+          Nombre total de jours reçus : <span id="total-days-claimed" style="color: #a78bfa; font-weight: 800; font-size: 15px;">0</span> jour(s)
+        </div>
+
+        <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 14px; padding: 16px; margin-bottom: 24px;">
+          <div style="font-size: 11px; color: #c4b5fd; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Montant à recevoir</div>
+          <div style="font-size: 32px; font-weight: 800; color: #8b5cf6;">150 FCFA</div>
+        </div>
+
+        <button class="submit-btn" id="claim-gift-btn" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: #fff; font-size: 16px; padding: 16px;" onclick="reclaimerArgentGratuit()">
+          RÉCLAMER 150 FCFA
+        </button>
+
+        <div id="gift-status-msg" style="font-size: 13px; margin-top: 16px; font-weight: 600;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-modal" id="card-modal">
+    <div class="card-modal-content">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+        <button onclick="fermerModalCarte()" style="background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer;">❮</button>
+        <div class="card-modal-title" style="margin-bottom: 0;">Ajouter un compte de retrait</div>
+        <div style="width: 24px;"></div>
+      </div>
+
+      <div class="form-card" style="background: transparent; border: none; padding: 0;">
+        <span class="form-label" style="font-weight: 700; color: #fff; font-size: 13px; margin-bottom: 6px;">*Sélectionnez le type de portefeuille</span>
+        <select class="select-box" id="card-country-select" onchange="onCardCountryChange()" style="display: none;"></select>
+        <select class="select-box" id="card-mode-select" style="margin-bottom: 20px;">
+          <option value="" disabled selected>Veuillez sélectionner</option>
+        </select>
+
+        <span class="form-label" style="font-weight: 700; color: #fff; font-size: 13px; margin-bottom: 6px;">*Nom</span>
+        <input type="text" class="input-box" id="card-name-input" placeholder="Veuillez entrer votre nom" style="margin-bottom: 20px;">
+
+        <span class="form-label" style="font-weight: 700; color: #fff; font-size: 13px; margin-bottom: 6px;">*Compte portefeuille</span>
+        <input type="tel" class="input-box" id="card-number-input" placeholder="Veuillez saisir votre compte portefeuille" style="margin-bottom: 30px;">
+
+        <button class="submit-btn" style="background-color: #dc2626; color: #fff; border-radius: 30px; font-weight: 700; padding: 15px; font-size: 16px;" onclick="enregistrerCarte()">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GOPAY OVERLAY -->
+  <div class="gopay-modal" id="gopay-modal">
+    <button class="gopay-close-btn" onclick="fermerGopayPleinEcran()">✕</button>
+
+    <div class="gopay-modal-content">
+      <div class="gopay-header">
+        <div class="gopay-logo-box">
+          <span class="gopay-circle"></span>
+          <span class="gopay-title">GOPAY</span>
+        </div>
+      </div>
+
+      <div id="gopay-form-section">
+        <div class="gopay-instruction">
+          Veuillez remplir votre mode de paiement et le compte de paiement réel que vous utiliserez pour effectuer le paiement.
+        </div>
+
+        <div class="gopay-amount-row">
+          Montant de paiement: <span class="gopay-amount-val" id="gopay-display-amount">XOF 3000</span>
+        </div>
+
+        <div class="gopay-sublabel">Veuillez sélectionner un mode de paiement</div>
+
+        <div class="gopay-providers-grid" id="gopay-providers"></div>
+
+        <div class="gopay-input-group">
+          <div class="gopay-prefix" id="gopay-phone-prefix">+226</div>
+          <input type="tel" class="gopay-input" id="gopay-phone-input" placeholder="Veuillez saisir votre compte de paiement réel">
+        </div>
+
+        <div class="gopay-warning-box">
+          <span>⚠️</span>
+          <div>Veuillez remplir votre compte de paiement avec précision. Un remplissage incorrect peut entraîner la perte des fonds transférés.</div>
+        </div>
+
+        <button class="gopay-confirm-btn" onclick="validerGopay()">Confirmer →</button>
+      </div>
+
+      <div id="payment-bf-view" class="payment-bf-view">
+        <div class="payment-bf-title">Copiez ce compte</div>
+        <div class="payment-bf-subtitle">Copiez ce compte <span id="payment-provider-label">ORANGE</span> et effectuez le paiement</div>
+
+        <div class="payment-bf-box">
+          <div class="payment-bf-field">
+            <div class="payment-bf-field-label">Montant total payable:</div>
+            <div class="payment-bf-field-val" id="payment-bf-amount">XOF 3000</div>
+          </div>
+
+          <div class="payment-bf-field">
+            <div class="payment-bf-field-label"><span id="payment-account-type">ORANGE</span> Compte:</div>
+            <div class="payment-bf-field-val">
+              <span id="payment-account-number">45488673</span>
+              <button class="copy-icon-btn" onclick="copierTexte(document.getElementById('payment-account-number').innerText)">📋</button>
+            </div>
+          </div>
+
+          <div class="payment-bf-field">
+            <div class="payment-bf-field-label">Nom du compte:</div>
+            <div class="payment-bf-field-val">
+              <span id="payment-account-name">ouedraogo hadama</span>
+              <button class="copy-icon-btn" onclick="copierTexte(document.getElementById('payment-account-name').innerText)">📋</button>
+            </div>
+          </div>
+        </div>
+
+        <button class="pay-btn" id="pay-action-btn" onclick="executerUssd()">Cliquez pour payer</button>
+
+        <div class="ussd-code-box">
+          <span id="ussd-text">*144*2*1*45488673*3000#</span>
+          <button class="copy-icon-btn" onclick="copierTexte(document.getElementById('ussd-text').innerText)">📋</button>
+        </div>
+
+        <div class="refresh-section">Paiement achevé?</div>
+        <div class="refresh-subtext">Cliquez sur <span>"Rafraîchir"</span> pour vérifier s'il réussit</div>
+      </div>
+
+      <div id="payment-wave-view" class="payment-bf-view">
+        <div class="payment-bf-title">Transfert Paiement</div>
+        <div class="payment-bf-subtitle">Scannez le QR Code ou copiez le numéro pour effectuer le transfert</div>
+
+        <div style="text-align: center; margin-bottom: 16px; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 12px; padding: 12px;">
+          <div style="font-size: 12px; font-weight: 700; color: #0369a1; margin-bottom: 8px;">Scanner le QR Code Wave</div>
+          <img src="1000161161_2.jpg" alt="Wave QR Code" style="width: 140px; height: 140px; object-fit: cover; border-radius: 8px; margin: 0 auto; display: block; border: 1px solid #bae6fd;">
+        </div>
+
+        <div class="payment-bf-box">
+          <div class="payment-bf-field">
+            <div class="payment-bf-field-label">Montant total payable:</div>
+            <div class="payment-bf-field-val" id="payment-wave-amount">XOF 3000</div>
+          </div>
+
+          <div class="payment-bf-field">
+            <div class="payment-bf-field-label">Numéro Compte:</div>
+            <div class="payment-bf-field-val">
+              <span id="payment-wave-number">46782817</span>
+              <button class="copy-icon-btn" onclick="copierTexte(document.getElementById('payment-wave-number').innerText)">📋</button>
+            </div>
+          </div>
+
+          <div class="payment-bf-field">
+            <div class="payment-bf-field-label">Nom du compte:</div>
+            <div class="payment-bf-field-val">
+              <span id="payment-wave-name">xxsof xxsof</span>
+              <button class="copy-icon-btn" onclick="copierTexte(document.getElementById('payment-wave-name').innerText)">📋</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 15px; margin-bottom: 20px;">
+          <div class="refresh-section" style="margin-bottom: 6px;">Preuve de paiement</div>
+          <div class="refresh-subtext" style="margin-bottom: 10px;">Veuillez importer la capture d'écran de votre transaction :</div>
+          <input type="file" id="wave-proof-file" accept="image/*" style="width: 100%; margin-bottom: 12px; font-size: 12px; color: #4b5563;">
+          <button class="pay-btn" style="background-color: #10b981;" onclick="soumettrePreuveWave()">Envoyer votre preuve</button>
+        </div>
+
+        <div class="refresh-section">Paiement achevé?</div>
+        <div class="refresh-subtext">Cliquez sur <span>"Rafraîchir"</span> pour vérifier s'il réussit</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- NAVIGATION BARRE -->
+  <div class="navbar" id="main-navbar">
+    <div class="nav-item active" onclick="naviguer('accueil', this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path></svg>
+      Maison
+    </div>
+    <div class="nav-item" onclick="naviguer('commande', this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"></path></svg>
+      Projet
+    </div>
+    <div class="nav-item" onclick="naviguer('equipe', this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4h7.6l-6.2 4.5 2.4 7.4-6.2-4.5-6.2 4.5 2.4-7.4-6.2-4.5h7.6z"></path><polygon points="5,10 6.2,13.7 10,14 7,16.2 8.2,20 5,17.8 1.8,20 3,16.2 0,14 3.8,13.7" transform="translate(1, 2) scale(0.5)"></polygon><polygon points="5,10 6.2,13.7 10,14 7,16.2 8.2,20 5,17.8 1.8,20 3,16.2 0,14 3.8,13.7" transform="translate(37, 2) scale(0.5)"></polygon></svg>
+      Équipe
+    </div>
+    <div class="nav-item" onclick="naviguer('moi', this)">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
+      Le mien
+    </div>
+  </div>
+
+  <script>
+    // --- GESTION DES ALERTES ET CONFIRMATIONS PERSONNALISÉES ---
+    function afficherAlerte(message) {
+      document.getElementById('custom-alert-msg').innerText = message;
+      document.getElementById('custom-alert-modal').classList.add('active');
+    }
+
+    function fermerAlertePerso() {
+      document.getElementById('custom-alert-modal').classList.remove('active');
+    }
+
+    let confirmCallback = null;
+
+    function demanderConfirmation(message, callback) {
+      document.getElementById('custom-confirm-msg').innerText = message;
+      confirmCallback = callback;
+      document.getElementById('custom-confirm-modal').classList.add('active');
+    }
+
+    function fermerConfirmation(reponse) {
+      document.getElementById('custom-confirm-modal').classList.remove('active');
+      if (confirmCallback) {
+        confirmCallback(reponse);
+        confirmCallback = null;
+      }
+    }
+
+    // --- GESTION DE L'ACHAT DE PRODUIT AVEC EXPLICATION ---
+    let produitEnCoursAchat = null;
+
+    function preparerAchatProduit(nomVip, prix, quotidien, total, imageUrl) {
+      produitEnCoursAchat = { nomVip, prix, quotidien, total, imageUrl };
+      
+      const modalBody = document.getElementById('purchase-modal-body');
+      modalBody.innerHTML = `
+        <div style="text-align: center; margin-bottom: 12px;">
+          <strong style="font-size: 16px; color: #facc15;">${nomVip}</strong>
+        </div>
+        <div style="background: #1f2937; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between;"><span>Prix d'investissement :</span> <span style="color: #fff; font-weight: 700;">${prix.toLocaleString()} FCFA</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>Revenu quotidien :</span> <span style="color: #10b981; font-weight: 700;">+${quotidien.toLocaleString()} FCFA / jour</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>Durée du contrat :</span> <span style="color: #fff; font-weight: 700;">90 Jours</span></div>
+          <div style="display: flex; justify-content: space-between; border-top: 1px solid #374151; padding-top: 6px;"><span>Revenu total estimé :</span> <span style="color: #10b981; font-weight: 800;">${total.toLocaleString()} FCFA</span></div>
+        </div>
+        <div style="font-size: 12px; color: #9ca3af; margin-top: 12px; line-height: 1.4;">
+          ℹ️ En confirmant cet achat, le montant sera déduit de votre solde disponible. Les revenus quotidiens seront automatiquement versés chaque 24 heures pendant 90 jours.
+        </div>
+      `;
+
+      document.getElementById('purchase-explanation-modal').classList.add('active');
+    }
+
+    function fermerModalAchat() {
+      document.getElementById('purchase-explanation-modal').classList.remove('active');
+      produitEnCoursAchat = null;
+    }
+
+    async function validerAchatProduit() {
+      if (!produitEnCoursAchat) return;
+      const { nomVip, prix, quotidien, total, imageUrl } = produitEnCoursAchat;
+      fermerModalAchat();
+      await acheterProduit(nomVip, prix, quotidien, total, imageUrl);
+    }
+
+    // --- LOGIQUE AUTOMATIQUE DES REVENUS QUOTIDIENS (TOUTES LES 24H) ---
+    function verifierEtCrediterRevenus24h() {
+      if (!currentUser.commandes || currentUser.commandes.length === 0) return;
+      const maintenant = Date.now();
+      const unJourMs = 24 * 60 * 60 * 1000;
+      let totalGagneSupplementaire = 0;
+      let donneesModifiees = false;
+
+      currentUser.commandes.forEach(cmd => {
+        if (!cmd.dernierCredit) cmd.dernierCredit = cmd.timestamp || maintenant;
+        const tempsEcoule = maintenant - cmd.dernierCredit;
+        const joursPasses = Math.floor(tempsEcoule / unJourMs);
+        const dureeMax = cmd.dureeMax || 90;
+        const joursEcoulesActuels = (cmd.joursEcoules !== undefined) ? cmd.joursEcoules : 0;
+
+        if (joursPasses > 0 && joursEcoulesActuels < dureeMax) {
+          const joursAcrediter = Math.min(joursPasses, dureeMax - joursEcoulesActuels);
+          if (joursAcrediter > 0) {
+            const gainTotalPeriode = joursAcrediter * cmd.quotidien;
+            totalGagneSupplementaire += gainTotalPeriode;
+            cmd.joursEcoules = joursEcoulesActuels + joursAcrediter;
+            cmd.percu = (cmd.percu || 0) + gainTotalPeriode;
+            cmd.dernierCredit += joursAcrediter * unJourMs;
+            donneesModifiees = true;
+          }
+        }
+      });
+
+      if (donneesModifiees && totalGagneSupplementaire > 0) {
+        currentUser.balance += totalGagneSupplementaire;
+        currentUser.soldeCumule = (currentUser.soldeCumule || 0) + totalGagneSupplementaire;
+        sauvegarderUtilisateurFirestore();
+        mettreAJourAffichageSolde();
+      }
+    }
+
+    async function sauvegarderUtilisateurFirestore() {
+      try {
+        const cleanPhone = currentUser.phone.replace(/[^0-9]/g, '');
+        const fullPhoneKey = `${currentUser.country}_${cleanPhone.slice(-8)}`;
+        await db.collection('users').doc(fullPhoneKey).update({ 
+          balance: currentUser.balance,
+          soldeCumule: currentUser.soldeCumule || 0,
+          commandes: currentUser.commandes,
+          rechargeTotale: currentUser.rechargeTotale || 0,
+          withdrawals: currentUser.withdrawals || [],
+          deposits: currentUser.deposits || []
+        });
+      } catch (err) {
+        console.error("Erreur de synchronisation Firestore :", err);
+      }
+    }
+
+    // --- OUVERTURE DE LA PAGE "MES PRODUITS" ---
+    function ouvrirMesProduitsPage(pushHistory = true) {
+      verifierEtCrediterRevenus24h();
+      const commandes = (currentUser.commandes && currentUser.commandes.length > 0) ? currentUser.commandes : [];
+      document.getElementById('mes-produits-qty-val').innerText = commandes.length;
+
+      let totalRevenuPerçu = 0;
+      commandes.forEach(c => {
+        totalRevenuPerçu += (c.percu || 0);
+      });
+      document.getElementById('mes-produits-rev-val').innerText = "FCFA " + totalRevenuPerçu.toLocaleString();
+
+      const container = document.getElementById('mes-produits-contenu-liste');
+      container.innerHTML = '';
+
+      if (commandes.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: #9ca3af; font-size: 14px; margin-top: 40px;">Vous n'avez pas acheté de produit</div>`;
+      } else {
+        commandes.forEach(cmd => {
+          const item = document.createElement('div');
+          item.style.cssText = 'background: #111827; border: 1px solid #1f2937; border-radius: 18px; padding: 18px; color: #fff; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3);';
+          
+          item.innerHTML = `
+            <div style="font-size: 17px; font-weight: 800; color: #ffffff; margin-bottom: 12px;">${cmd.titre}</div>
+            
+            <div style="width: 100px; height: 100px; margin: 0 auto 14px auto; border-radius: 14px; overflow: hidden; background: #1a2234; border: 1px solid #2d3748;">
+              <img src="${cmd.image || 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=500'}" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+
+            <div style="display: inline-block; background-color: #7c3aed; color: #fff; padding: 6px 18px; border-radius: 20px; font-size: 13px; font-weight: 700; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(124,58,237,0.4);">
+              Durée : ${cmd.joursEcoules || 0}/${cmd.dureeMax || 90} jours
+            </div>
+
+            <div style="border-top: 1px solid #1f2937; padding-top: 14px; text-align: left; font-size: 13px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: #9ca3af;">Prix :</span> <span style="font-weight: 700; color: #fff;">FCFA ${cmd.prix.toLocaleString()}</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #9ca3af;">Revenu quotidien :</span> <span style="font-weight: 700; color: #10b981;">FCFA ${cmd.quotidien.toLocaleString()}</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #9ca3af;">Revenu total :</span> <span style="font-weight: 700; color: #10b981;">FCFA ${cmd.total.toLocaleString()}</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #9ca3af;">Revenu perçu :</span> <span style="font-weight: 700; color: #a78bfa;">FCFA ${(cmd.percu || 0).toLocaleString()}</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #9ca3af;">Date d'achat :</span> <span style="color: #cbd5e1; font-weight: 600;">${cmd.date}</span></div>
+            </div>
+          `;
+          container.appendChild(item);
+        });
+      }
+
+      ouvrirSousPage('mes-produits-page', pushHistory);
+    }
+
+    function ouvrirTelegram(url) {
+      try {
+        window.open(url, '_blank');
+      } catch (err) {
+        window.location.href = url;
+      }
+    }
+
+    // --- INITIALISATION FIREBASE ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyDothO7DOgUCjjNkVlVgu5SxcjvG3kIx18",
+      authDomain: "sanofi-4007e.firebaseapp.com",
+      projectId: "sanofi-4007e",
+      storageBucket: "sanofi-4007e.firebasestorage.app",
+      messagingSenderId: "928249788122",
+      appId: "1:928249788122:web:a5868ecf602f68fdbbd7e3",
+      measurementId: "G-YVJKZRCL1Y"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let currentCountry = 'BF';
+    let currentPrefix = '+226';
+    let selectedOperator = 'orange';
+
+    const countryConfig = {
+      'BF': { prefix: '+226', digits: 8, placeholder: 'Saisissez votre numéro de téléphone' },
+      'CI': { prefix: '+225', digits: 10, placeholder: 'Saisissez votre numéro de téléphone' },
+      'ML': { prefix: '+223', digits: 8, placeholder: 'Saisissez votre numéro de téléphone' },
+      'SN': { prefix: '+221', digits: 9, placeholder: 'Saisissez votre numéro de téléphone' },
+      'NE': { prefix: '+227', digits: 8, placeholder: 'Saisissez votre numéro de téléphone' },
+      'CM': { prefix: '+237', digits: 9, placeholder: 'Saisissez votre numéro de téléphone' }
+    };
+
+    let currentUser = { phone: '', country: 'BF', balance: 1200, soldeCumule: 0, myInviteCode: '', referredBy: '', rechargeTotale: 0, withdrawals: [], deposits: [], commandes: [], lastDailyClaim: '', totalDaysClaimed: 0 };
+
+    let carteUtilisateur = {
+      enregistree: false,
+      mode: '',
+      nom: '',
+      numero: ''
+    };
+
+    const merchantConfig = {
+      'orange_bf': {
+        providerLabel: 'ORANGE',
+        labelClass: 'provider-orange',
+        accountNumber: '45488673',
+        accountName: 'ouedraogo hadama',
+        btnClass: 'bg-orange-btn',
+        getUssd: (num, amount) => `*144*2*1*${num}*${amount}#`
+      },
+      'moov_bf': {
+        providerLabel: 'MOOV',
+        labelClass: 'provider-moov',
+        accountNumber: '53853476',
+        accountName: 'service mardian',
+        btnClass: 'bg-moov-btn',
+        getUssd: (num, amount) => `*555*2*1*${num}*${amount}#`
+      },
+      'orange_cm': {
+        providerLabel: 'ORANGE',
+        labelClass: 'provider-orange',
+        accountNumber: '66666666',
+        accountName: 'xxsof xxsof',
+        btnClass: 'bg-orange-btn',
+        getUssd: (num, amount) => `*150*2*1*${num}*${amount}#`
+      }
+    };
+
+    const operatorsByCountry = {
+      'BF': [
+        { id: 'orange', name: 'ORANGE', badge: 'bg-orange', text: 'orange' },
+        { id: 'moov', name: 'MOOV', badge: 'bg-moov', text: 'Moov' }
+      ],
+      'ML': [{ id: 'wave', name: 'WAVE', badge: 'bg-wave', text: 'Wave' }],
+      'CI': [{ id: 'wave', name: 'WAVE', badge: 'bg-wave', text: 'Wave' }],
+      'TG': [{ id: 'wave', name: 'WAVE', badge: 'bg-wave', text: 'Wave' }],
+      'CM': [{ id: 'orange', name: 'ORANGE', badge: 'bg-orange', text: 'orange' }]
+    };
+
+    const cardProvidersByCountry = {
+      'BF': ['Orange Money', 'Moov Money'],
+      'ML': ['Wave'],
+      'CI': ['Wave'],
+      'TG': ['Wave'],
+      'CM': ['Orange Money Cameroon']
+    };
+
+    async function acheterProduit(nomVip, prix, quotidien, total, imageUrl) {
+      if (currentUser.balance < prix) {
+        afficherAlerte("Solde insuffisant pour acheter ce pack VIP. Veuillez recharger votre compte.");
+        return;
+      }
+      
+      currentUser.balance -= prix;
+      
+      const now = new Date();
+      const timestampActuel = Date.now();
+      const dateStr = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear() + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+      
+      const nouvelleCommande = {
+        titre: nomVip,
+        prix: prix,
+        quotidien: quotidien,
+        total: total,
+        percu: 0,
+        dureeMax: 90,
+        joursEcoules: 0,
+        timestamp: timestampActuel,
+        dernierCredit: timestampActuel,
+        image: imageUrl,
+        date: dateStr,
+        statut: 'Actif'
+      };
+      
+      if (!currentUser.commandes) currentUser.commandes = [];
+      currentUser.commandes.unshift(nouvelleCommande);
+      
+      try {
+        await sauvegarderUtilisateurFirestore();
+        mettreAJourAffichageSolde();
+        afficherAlerte(`🎉 Félicitations ! Vous avez acheté avec succès le pack ${nomVip} pour ${prix.toLocaleString()} FCFA.`);
+      } catch (err) {
+        console.error("Erreur achat:", err);
+        afficherAlerte("Erreur lors de l'enregistrement de l'achat.");
+      }
+    }
+
+    let tickerItems = [
+      "***8850 a rechargé 4,000 ******7481 a rechargé 8,000",
+      "071****790 Recharge 40,000 FCFA",
+      "70****12 Recharge 15,000 FCFA"
+    ];
+    let currentTickerIndex = 0;
+
+    async function initialiserTickerDepots() {
+      try {
+        const snapshot = await db.collection('users').limit(20).get();
+        if (!snapshot.empty) {
+          const dynamicList = [];
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.phone) {
+              let cleanPhone = data.phone.replace(/[^0-9]/g, '');
+              if (cleanPhone.length >= 8) {
+                let masked = "***" + cleanPhone.substring(cleanPhone.length - 4);
+                let randomAmt = data.rechargeTotale || 4000;
+                dynamicList.push(`${masked} a rechargé ${randomAmt.toLocaleString()}`);
+              }
+            }
+          });
+          if (dynamicList.length > 0) {
+            tickerItems = dynamicList;
+          }
+        }
+      } catch (err) {
+        console.log("Utilisation des valeurs par défaut pour le ticker", err);
+      }
+
+      demarrerBoucleTicker();
+    }
+
+    function demarrerBoucleTicker() {
+      const tickerEl = document.getElementById('ticker-text');
+      if (!tickerEl) return;
+
+      tickerEl.innerText = tickerItems[currentTickerIndex];
+
+      setInterval(() => {
+        currentTickerIndex = (currentTickerIndex + 1) % tickerItems.length;
+        tickerEl.style.opacity = 0;
+        setTimeout(() => {
+          tickerEl.innerText = tickerItems[currentTickerIndex];
+          tickerEl.style.opacity = 1;
+        }, 300);
+      }, 3500);
+    }
+
+    function ouvrirModalNotification() {
+      document.getElementById('platform-notification-modal').classList.add('active');
+    }
+
+    function fermerModalNotification() {
+      document.getElementById('platform-notification-modal').classList.remove('active');
+    }
+
+    function toggleAuthMode(mode) {
+      const regContainer = document.getElementById('register-container');
+      const loginContainer = document.getElementById('login-container');
+      const headerTitle = document.getElementById('auth-main-title');
+
+      if (mode === 'login') {
+        regContainer.style.display = 'none';
+        loginContainer.style.display = 'block';
+        if (headerTitle) headerTitle.innerText = 'Connexion';
+      } else {
+        regContainer.style.display = 'block';
+        loginContainer.style.display = 'none';
+        if (headerTitle) headerTitle.innerText = 'Inscription';
+      }
+    }
+
+    function updateAuthForm(type) {
+      const country = document.getElementById(type === 'reg' ? 'reg-country' : 'login-country').value;
+      const config = countryConfig[country] || countryConfig['BF'];
+      
+      document.getElementById(type === 'reg' ? 'reg-phone' : 'login-phone').placeholder = config.placeholder;
+      
+      if (type === 'reg') checkRegForm();
+      else checkLoginForm();
+    }
+
+    function togglePassword(fieldId, iconEl) {
+      const field = document.getElementById(fieldId);
+      if (field.type === 'password') {
+        field.type = 'text';
+        iconEl.innerText = '🙈';
+      } else {
+        field.type = 'password';
+        iconEl.innerText = '👁️';
+      }
+    }
+
+    function checkRegForm() {
+      const country = document.getElementById('reg-country').value;
+      const phone = document.getElementById('reg-phone').value.trim();
+      const p1 = document.getElementById('reg-pass').value;
+      const p2 = document.getElementById('reg-confirm-pass').value;
+      const btn = document.getElementById('reg-btn');
+      const requiredDigits = countryConfig[country].digits;
+
+      if (phone.length === requiredDigits && p1.length >= 4 && p1 === p2) {
+        btn.style.background = 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)';
+        btn.style.color = '#ffffff';
+        btn.style.boxShadow = '0 6px 16px rgba(109, 40, 217, 0.35)';
+      } else {
+        btn.style.background = '#374151';
+        btn.style.color = '#9ca3af';
+        btn.style.boxShadow = 'none';
+      }
+    }
+
+    function checkLoginForm() {
+      const country = document.getElementById('login-country').value;
+      const phone = document.getElementById('login-phone').value.trim();
+      const p1 = document.getElementById('login-pass').value;
+      const btn = document.getElementById('login-btn');
+      const requiredDigits = countryConfig[country].digits;
+
+      if (phone.length === requiredDigits && p1.length >= 4) {
+        btn.style.background = 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)';
+        btn.style.color = '#ffffff';
+        btn.style.boxShadow = '0 6px 16px rgba(109, 40, 217, 0.35)';
+      } else {
+        btn.style.background = '#374151';
+        btn.style.color = '#9ca3af';
+        btn.style.boxShadow = 'none';
+      }
+    }
+
+    async function handleRegister() {
+      const country = document.getElementById('reg-country').value;
+      const phone = document.getElementById('reg-phone').value.trim();
+      const p1 = document.getElementById('reg-pass').value;
+      const p2 = document.getElementById('reg-confirm-pass').value;
+      const inviteCodeInput = document.getElementById('reg-code').value.trim();
+      const requiredDigits = countryConfig[country].digits;
+
+      if (phone.length !== requiredDigits) {
+        afficherAlerte(`Pour ce pays, le numéro doit comporter exactement ${requiredDigits} chiffres.`);
+        return;
+      }
+      if (p1 !== p2) {
+        afficherAlerte("Les mots de passe ne correspondent pas !");
+        return;
+      }
+
+      const fullPhoneKey = `${country}_${phone}`;
+
+      try {
+        const userDocRef = db.collection('users').doc(fullPhoneKey);
+        const docSnap = await userDocRef.get();
+
+        if (docSnap.exists) {
+          afficherAlerte("Ce numéro est déjà enregistré. Veuillez vous connecter.");
+          return;
+        }
+
+        const uniqueMyCode = Math.random().toString(36).substring(2, 8);
+
+        const userData = {
+          phone: `${countryConfig[country].prefix} ${phone}`,
+          country: country,
+          password: p1,
+          balance: 1200, 
+          soldeCumule: 0,
+          myInviteCode: uniqueMyCode,
+          referredBy: inviteCodeInput || '',
+          rechargeTotale: 0,
+          card: { enregistree: false, mode: '', nom: '', numero: '' },
+          withdrawals: [],
+          deposits: [],
+          commandes: [],
+          lastDailyClaim: '',
+          totalDaysClaimed: 0,
+          createdAt: new Date().toISOString()
+        };
+
+        await userDocRef.set(userData);
+        currentUser = userData;
+        connexionReussie(fullPhoneKey);
+      } catch (error) {
+        console.error("Erreur lors de l'inscription :", error);
+        afficherAlerte("Erreur de connexion à Firestore. Veuillez réessayer.");
+      }
+    }
+
+    async function handleLogin() {
+      const country = document.getElementById('login-country').value;
+      const phone = document.getElementById('login-phone').value.trim();
+      const p1 = document.getElementById('login-pass').value;
+      const requiredDigits = countryConfig[country].digits;
+
+      if (phone.length !== requiredDigits) {
+        afficherAlerte(`Pour ce pays, le numéro doit comporter exactement ${requiredDigits} chiffres.`);
+        return;
+      }
+      if (!p1) {
+        afficherAlerte("Veuillez saisir votre mot de passe.");
+        return;
+      }
+
+      const fullPhoneKey = `${country}_${phone}`;
+
+      try {
+        const userDocRef = db.collection('users').doc(fullPhoneKey);
+        const docSnap = await userDocRef.get();
+
+        if (!docSnap.exists) {
+          afficherAlerte("Aucun compte trouvé avec ce numéro. Veuillez vous inscrire.");
+          return;
+        }
+
+        const userData = docSnap.data();
+        if (userData.password !== p1) {
+          afficherAlerte("Mot de passe incorrect !");
+          return;
+        }
+
+        currentUser = userData;
+        if (!currentUser.myInviteCode) {
+          currentUser.myInviteCode = Math.random().toString(36).substring(2, 8);
+          await userDocRef.update({ myInviteCode: currentUser.myInviteCode });
+        }
+        if (currentUser.soldeCumule === undefined) currentUser.soldeCumule = 0;
+        if (!currentUser.withdrawals) currentUser.withdrawals = [];
+        if (!currentUser.deposits) currentUser.deposits = [];
+        if (!currentUser.commandes) currentUser.commandes = [];
+        if (!currentUser.lastDailyClaim) currentUser.lastDailyClaim = '';
+        if (currentUser.totalDaysClaimed === undefined) currentUser.totalDaysClaimed = 0;
+        if (currentUser.rechargeTotale === undefined) currentUser.rechargeTotale = 0;
+
+        if (userData.card) {
+          carteUtilisateur = userData.card;
+          if (carteUtilisateur.enregistree) {
+            document.getElementById('display-user-name').innerText = `${carteUtilisateur.mode} - ${carteUtilisateur.nom} (${carteUtilisateur.numero})`;
+          }
+        }
+        connexionReussie(fullPhoneKey);
+      } catch (error) {
+        console.error("Erreur lors de la connexion :", error);
+        afficherAlerte("Erreur de connexion à Firestore. Veuillez réessayer.");
+      }
+    }
+
+    function connexionReussie(phoneKey) {
+      if (phoneKey) {
+        localStorage.setItem('sanofi_logged_user', phoneKey);
+      }
+
+      verifierEtCrediterRevenus24h();
+
+      document.getElementById('auth-page').classList.add('hidden');
+      document.getElementById('main-navbar').classList.add('active');
+      document.getElementById('moi-user-phone').innerText = currentUser.phone;
+
+      document.getElementById('invite-code').innerText = currentUser.myInviteCode;
+      const currentBaseUrl = window.location.href.split('?')[0].split('#')[0];
+      document.getElementById('invite-link').innerText = `${currentBaseUrl}?code=${currentUser.myInviteCode}`;
+      
+      const cleanPhoneDigits = currentUser.phone ? currentUser.phone.replace(/[^0-9]/g, '') : '';
+      const adminMenuBtn = document.getElementById('admin-menu-btn');
+      if (adminMenuBtn) {
+        if (cleanPhoneDigits.endsWith('73002424')) {
+          adminMenuBtn.style.display = 'flex';
+        } else {
+          adminMenuBtn.style.display = 'none';
+        }
+      }
+
+      mettreAJourAffichageSolde();
+      renderRetraitHistory();
+      renderDepotHistory();
+      chargerEtAfficherEquipe();
+      naviguer('accueil', document.querySelector('.navbar .nav-item'), false);
+      history.replaceState({ page: 'accueil' }, "", "#accueil");
+
+      ouvrirModalNotification();
+    }
+
+    function ouvrirAdminPage() {
+      const cleanPhoneDigits = currentUser.phone ? currentUser.phone.replace(/[^0-9]/g, '') : '';
+      if (!cleanPhoneDigits.endsWith('73002424')) {
+        afficherAlerte("Accès refusé. Réservé à l'administrateur.");
+        return;
+      }
+      chargerDonneesAdmin();
+      ouvrirSousPage('admin-page');
+    }
+
+    function switchAdminTab(tabName, btnEl) {
+      document.querySelectorAll('.preset-btn').forEach(b => {
+        if(b.parentElement === btnEl.parentElement) b.classList.remove('active');
+      });
+      btnEl.classList.add('active');
+
+      document.getElementById('admin-tab-users').style.display = (tabName === 'users') ? 'block' : 'none';
+      document.getElementById('admin-tab-deposits').style.display = (tabName === 'deposits') ? 'block' : 'none';
+      document.getElementById('admin-tab-withdrawals').style.display = (tabName === 'withdrawals') ? 'block' : 'none';
+      document.getElementById('admin-tab-messages').style.display = (tabName === 'messages') ? 'block' : 'none';
+
+      if (tabName === 'users') chargerDonneesAdmin();
+      if (tabName === 'deposits') chargerDepotsAdmin();
+      if (tabName === 'withdrawals') chargerRetraitsAdmin();
+      if (tabName === 'messages') chargerMessagesAdmin();
+    }
+
+    async function chargerDonneesAdmin() {
+      const container = document.getElementById('admin-users-list');
+      const totalUsersEl = document.getElementById('admin-total-users');
+      container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px;">Chargement des données...</div>';
+
+      try {
+        const snapshot = await db.collection('users').get();
+        container.innerHTML = '';
+        totalUsersEl.innerText = snapshot.size;
+
+        if (snapshot.empty) {
+          container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px;">Aucun utilisateur trouvé.</div>';
+          return;
+        }
+
+        snapshot.forEach(doc => {
+          const u = doc.data();
+          const card = document.createElement('div');
+          card.style.cssText = 'background: #111827; border: 1px solid #1f2937; border-radius: 14px; padding: 14px 16px; color: #fff; display: flex; flex-direction: column; gap: 8px;';
+          
+          card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2937; padding-bottom: 6px;">
+              <span style="font-weight: 700; color: #a78bfa; font-size: 14px;">📱 ${u.phone || 'Numéro inconnu'}</span>
+              <span style="font-size: 11px; background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 2px 6px; border-radius: 6px; font-weight: 700;">Solde: ${(u.balance || 0).toLocaleString()} F</span>
+            </div>
+            <div style="font-size: 12px; color: #9ca3af; display: flex; justify-content: space-between;">
+              <span>Mot de passe : <strong style="color: #fff; background: #1a2234; padding: 2px 6px; border-radius: 4px;">${u.password || 'N/A'}</strong></span>
+              <span>Code parrain : <strong style="color: #38bdf8;">${u.myInviteCode || 'Aucun'}</strong></span>
+            </div>
+            <div style="font-size: 11px; color: #64748b;">
+              Inscrit le : ${u.createdAt ? new Date(u.createdAt).toLocaleString() : 'Date inconnue'}
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Erreur chargement admin :", err);
+        container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Erreur lors du chargement des utilisateurs.</div>';
+      }
+    }
+
+    async function chargerDepotsAdmin() {
+      const container = document.getElementById('admin-deposits-list');
+      container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px;">Chargement des dépôts...</div>';
+
+      try {
+        const snapshot = await db.collection('deposits').get();
+        container.innerHTML = '';
+
+        const depositsList = [];
+        snapshot.forEach(docSnap => {
+          const dep = docSnap.data();
+          if (dep.status === 'En attente') {
+            depositsList.push({ id: docSnap.id, ...dep });
+          }
+        });
+
+        if (depositsList.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px;">Aucun dépôt en attente de confirmation.</div>';
+          return;
+        }
+
+        depositsList.forEach(dep => {
+          const card = document.createElement('div');
+          card.style.cssText = 'background: #111827; border: 1px solid #1f2937; border-radius: 14px; padding: 14px 16px; color: #fff; display: flex; flex-direction: column; gap: 8px;';
+          
+          let imageHtml = '';
+          if (dep.proofImage) {
+            imageHtml = `<div style="margin-top: 8px;"><div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">Capture d'écran de la preuve :</div><img src="${dep.proofImage}" style="max-width: 100%; max-height: 200px; border-radius: 8px; object-fit: contain; border: 1px solid #374151;" /></div>`;
+          }
+
+          card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2937; padding-bottom: 6px;">
+              <span style="font-weight: 700; color: #a78bfa; font-size: 14px;">📱 ${dep.phone || 'Inconnu'} (${dep.method || 'Mobile'})</span>
+              <span style="font-size: 13px; background: rgba(139, 92, 246, 0.2); color: #c4b5fd; padding: 3px 8px; border-radius: 6px; font-weight: 700;">${dep.amount.toLocaleString()} FCFA</span>
+            </div>
+            <div style="font-size: 12px; color: #9ca3af;">
+              Date : ${new Date(dep.timestamp).toLocaleString()}
+            </div>
+            ${imageHtml}
+            <button class="submit-btn" style="background: #10b981; color: #fff; padding: 8px; margin-top: 6px; font-size: 13px;" onclick="confirmerDepotAdmin('${dep.id}', '${dep.userId}', ${dep.amount})">
+              ✓ Confirmer ce dépôt
+            </button>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Erreur chargement dépôts admin :", err);
+        container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Erreur de chargement des dépôts.</div>';
+      }
+    }
+
+    async function confirmerDepotAdmin(depositId, userId, amount) {
+      try {
+        await db.collection('deposits').doc(depositId).update({ status: 'Confirmé' });
+
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          const newBalance = (userData.balance || 0) + amount;
+          const newSoldeCumule = (userData.soldeCumule || 0) + amount;
+          const newRechargeTotale = (userData.rechargeTotale || 0) + amount;
+          
+          let userDeposits = userData.deposits || [];
+          userDeposits.forEach(d => {
+            if (d.statut === 'En attente' && d.montant === amount) {
+              d.statut = 'Confirmé';
+            }
+          });
+
+          await userRef.update({ 
+            balance: newBalance, 
+            soldeCumule: newSoldeCumule, 
+            rechargeTotale: newRechargeTotale,
+            deposits: userDeposits
+          });
+
+          if (userData.referredBy) {
+            const allUsersSnap = await db.collection('users').get();
+            let allUsrs = [];
+            allUsersSnap.forEach(d => allUsrs.push({ id: d.id, ...d.data() }));
+
+            let parrainNiv1 = allUsrs.find(u => u.myInviteCode === userData.referredBy);
+            if (parrainNiv1) {
+              let comm1 = amount * 0.30;
+              let parrain1Ref = db.collection('users').doc(parrainNiv1.id);
+              let newB1 = (parrainNiv1.balance || 0) + comm1;
+              let newC1 = (parrainNiv1.soldeCumule || 0) + comm1;
+              await parrain1Ref.update({ balance: newB1, soldeCumule: newC1 });
+
+              if (currentUser && parrainNiv1.id === `${currentUser.country}_${currentUser.phone.replace(/[^0-9]/g, '').slice(-8)}`) {
+                currentUser.balance = newB1;
+                currentUser.soldeCumule = newC1;
+              }
+
+              let parrainNiv2 = allUsrs.find(u => u.myInviteCode === parrainNiv1.referredBy);
+              if (parrainNiv2) {
+                let comm2 = amount * 0.02;
+                let parrain2Ref = db.collection('users').doc(parrainNiv2.id);
+                let newB2 = (parrainNiv2.balance || 0) + comm2;
+                let newC2 = (parrainNiv2.soldeCumule || 0) + comm2;
+                await parrain2Ref.update({ balance: newB2, soldeCumule: newC2 });
+
+                if (currentUser && parrainNiv2.id === `${currentUser.country}_${currentUser.phone.replace(/[^0-9]/g, '').slice(-8)}`) {
+                  currentUser.balance = newB2;
+                  currentUser.soldeCumule = newC2;
+                }
+
+                let parrainNiv3 = allUsrs.find(u => u.myInviteCode === parrainNiv2.referredBy);
+                if (parrainNiv3) {
+                  let comm3 = amount * 0.01;
+                  let parrain3Ref = db.collection('users').doc(parrainNiv3.id);
+                  let newB3 = (parrainNiv3.balance || 0) + comm3;
+                  let newC3 = (parrainNiv3.soldeCumule || 0) + comm3;
+                  await parrain3Ref.update({ balance: newB3, soldeCumule: newC3 });
+
+                  if (currentUser && parrainNiv3.id === `${currentUser.country}_${currentUser.phone.replace(/[^0-9]/g, '').slice(-8)}`) {
+                    currentUser.balance = newB3;
+                    currentUser.soldeCumule = newC3;
+                  }
+                }
+              }
+            }
+          }
+
+          if (currentUser && userId === `${currentUser.country}_${currentUser.phone.replace(/[^0-9]/g, '').slice(-8)}`) {
+            currentUser.balance = newBalance;
+            currentUser.soldeCumule = newSoldeCumule;
+            currentUser.rechargeTotale = newRechargeTotale;
+            currentUser.deposits = userDeposits;
+            mettreAJourAffichageSolde();
+            renderDepotHistory();
+          }
+        }
+
+        afficherAlerte("Dépôt confirmé avec succès ! Le solde et le solde cumulé du client ont été mis à jour.");
+        chargerDepotsAdmin();
+      } catch (err) {
+        console.error("Erreur confirmation dépôt :", err);
+        afficherAlerte("Erreur lors de la confirmation du dépôt.");
+      }
+    }
+
+    async function chargerRetraitsAdmin() {
+      const container = document.getElementById('admin-withdrawals-list');
+      container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px;">Chargement des retraits...</div>';
+
+      try {
+        const snapshot = await db.collection('users').get();
+        container.innerHTML = '';
+        let countPending = 0;
+
+        snapshot.forEach(docSnap => {
+          const u = docSnap.data();
+          const userId = docSnap.id;
+          if (u.withdrawals && Array.isArray(u.withdrawals)) {
+            u.withdrawals.forEach((w, index) => {
+              if (w.statut === 'En attente') {
+                countPending++;
+                const card = document.createElement('div');
+                card.style.cssText = 'background: #111827; border: 1px solid #1f2937; border-radius: 14px; padding: 14px 16px; color: #fff; display: flex; flex-direction: column; gap: 8px;';
+                
+                card.innerHTML = `
+                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2937; padding-bottom: 6px;">
+                    <span style="font-weight: 700; color: #ef4444; font-size: 14px;">📱 ${u.phone || 'Inconnu'}</span>
+                    <span style="font-size: 13px; background: rgba(239, 68, 68, 0.2); color: #ef4444; padding: 3px 8px; border-radius: 6px; font-weight: 700;">${w.montant.toLocaleString()} FCFA</span>
+                  </div>
+                  <div style="font-size: 12px; color: #9ca3af; display: flex; flex-direction: column; gap: 2px;">
+                    <span>Ref : ${w.ref}</span>
+                    <span>Montant net à verser : <strong style="color: #10b981;">${w.recu.toLocaleString()} FCFA</strong></span>
+                    <span>Date : ${w.date}</span>
+                  </div>
+                  <button class="submit-btn" style="background: #10b981; color: #fff; padding: 8px; margin-top: 6px; font-size: 13px;" onclick="confirmerRetraitAdmin('${userId}', ${index})">
+                    ✓ Valider / Confirmer ce retrait
+                  </button>
+                `;
+                container.appendChild(card);
+              }
+            });
+          }
+        });
+
+        if (countPending === 0) {
+          container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px;">Aucun retrait en attente de confirmation.</div>';
+        }
+      } catch (err) {
+        console.error("Erreur chargement retraits admin :", err);
+        container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Erreur de chargement des retraits.</div>';
+      }
+    }
+
+    async function confirmerRetraitAdmin(userId, withdrawalIndex) {
+      try {
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          if (userData.withdrawals && userData.withdrawals[withdrawalIndex]) {
+            userData.withdrawals[withdrawalIndex].statut = 'Réussi';
+            await userRef.update({ withdrawals: userData.withdrawals });
+
+            if (currentUser && userId === `${currentUser.country}_${currentUser.phone.replace(/[^0-9]/g, '').slice(-8)}`) {
+              currentUser.withdrawals = userData.withdrawals;
+              renderRetraitHistory();
+            }
+          }
+        }
+
+        afficherAlerte("Retrait validé et confirmé avec succès !");
+        chargerRetraitsAdmin();
+      } catch (err) {
+        console.error("Erreur confirmation retrait :", err);
+        afficherAlerte("Erreur lors de la validation du retrait.");
+      }
+    }
+
+    async function chargerMessagesAdmin() {
+      const container = document.getElementById('admin-messages-list');
+      container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px;">Chargement des messages...</div>';
+
+      try {
+        const snapshot = await db.collection('messages').get();
+        container.innerHTML = '';
+
+        if (snapshot.empty) {
+          container.innerHTML = '<div style="text-align: center; color: #9ca3af; padding: 20px;">Aucun message ou preuve de dépôt reçu.</div>';
+          return;
+        }
+
+        const messagesList = [];
+        snapshot.forEach(docSnap => {
+          messagesList.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        messagesList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        messagesList.forEach(msg => {
+          const card = document.createElement('div');
+          card.style.cssText = 'background: #111827; border: 1px solid #1f2937; border-radius: 14px; padding: 14px 16px; color: #fff; display: flex; flex-direction: column; gap: 8px;';
+          
+          let imageHtml = '';
+          if (msg.proofImage) {
+            imageHtml = `<div style="margin-top: 8px;"><div style="font-size:11px; color:#9ca3af; margin-bottom:4px;">Capture d'écran :</div><img src="${msg.proofImage}" style="max-width: 100%; max-height: 200px; border-radius: 8px; object-fit: contain; border: 1px solid #374151;" /></div>`;
+          }
+
+          card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f2937; padding-bottom: 6px;">
+              <span style="font-weight: 700; color: #a78bfa; font-size: 14px;">📱 ${msg.phone || 'Inconnu'}</span>
+              <span style="font-size: 11px; background: rgba(59, 130, 246, 0.2); color: #3b82f6; padding: 2px 6px; border-radius: 6px; font-weight: 700;">${msg.type || 'Preuve Dépôt'}</span>
+            </div>
+            <div style="font-size: 13px; color: #cbd5e1; line-height: 1.4;">
+              ${msg.content || 'Aucun détail'}
+            </div>
+            ${imageHtml}
+            <div style="font-size: 11px; color: #64748b; display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+              <span>Date : ${new Date(msg.timestamp).toLocaleString()}</span>
+              <button class="preset-btn" style="padding: 4px 10px; font-size: 11px; background: #ef4444; border: none; color: #fff;" onclick="supprimerMessageAdmin('${msg.id}')">Supprimer</button>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error("Erreur chargement messages :", err);
+        container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Erreur de chargement des messages.</div>';
+      }
+    }
+
+    async function supprimerMessageAdmin(msgId) {
+      try {
+        await db.collection('messages').doc(msgId).delete();
+        chargerMessagesAdmin();
+      } catch (err) {
+        console.error("Erreur suppression message :", err);
+        afficherAlerte("Erreur lors de la suppression.");
+      }
+    }
+
+    async function chargerEtAfficherEquipe() {
+      if (!currentUser || !currentUser.myInviteCode) return;
+
+      try {
+        const snapshot = await db.collection('users').get();
+        const allUsers = [];
+        snapshot.forEach(doc => {
+          allUsers.push({ id: doc.id, ...doc.data() });
+        });
+
+        const niv1 = allUsers.filter(u => u.referredBy === currentUser.myInviteCode);
+        const codesNiv1 = niv1.map(u => u.myInviteCode).filter(Boolean);
+        const niv2 = allUsers.filter(u => codesNiv1.includes(u.referredBy));
+        const codesNiv2 = niv2.map(u => u.myInviteCode).filter(Boolean);
+        const niv3 = allUsers.filter(u => codesNiv2.includes(u.referredBy));
+
+        let c1 = niv1.length, c2 = niv2.length, c3 = niv3.length;
+        let r1 = 0, r2 = 0, r3 = 0;
+        let totalRechargeEquipe = 0;
+
+        const teamContainer = document.getElementById('team-list-container');
+        if (teamContainer) {
+          teamContainer.innerHTML = '';
+        }
+
+        const allTeamMembers = [
+          ...niv1.map(u => ({ ...u, niveau: '1', taux: 0.30 })),
+          ...niv2.map(u => ({ ...u, niveau: '2', taux: 0.02 })),
+          ...niv3.map(u => ({ ...u, niveau: '3', taux: 0.01 }))
+        ];
+
+        allTeamMembers.forEach(m => {
+          const rechargeMembre = m.rechargeTotale || 0;
+          totalRechargeEquipe += rechargeMembre;
+          const recompenseMembre = rechargeMembre * m.taux;
+
+          if (m.niveau === '1') r1 += recompenseMembre;
+          else if (m.niveau === '2') r2 += recompenseMembre;
+          else if (m.niveau === '3') r3 += recompenseMembre;
+
+          if (teamContainer) {
+            const item = document.createElement('div');
+            item.className = 'team-member-item';
+            item.setAttribute('data-niveau', m.niveau);
+            item.setAttribute('data-recharge', rechargeMembre);
+            item.style.cssText = 'background: #111827; border: 1px solid #1f2937; border-radius: 14px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; color: #fff;';
+            
+            item.innerHTML = `
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="font-weight: 700; font-size: 14px; color: #a78bfa;">${m.phone || 'Membre'}</div>
+                <div style="font-size: 11px; color: #9ca3af;">Niveau ${m.niveau} • ${m.createdAt ? new Date(m.createdAt).toLocaleDateString() : 'Récemment'}</div>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                <div style="font-size: 13px; font-weight: 700; color: #10b981;">Recharge: ${rechargeMembre.toLocaleString()} F</div>
+                <div style="font-size: 12px; font-weight: 600; color: #c4b5fd;">Récompense: +${recompenseMembre.toLocaleString()} F</div>
+              </div>
+            `;
+            teamContainer.appendChild(item);
+          }
+        });
+
+        document.getElementById('card-count-1').innerText = c1;
+        document.getElementById('card-count-2').innerText = c2;
+        document.getElementById('card-count-3').innerText = c3;
+
+        document.getElementById('card-reward-1').innerText = r1.toLocaleString() + ' F';
+        document.getElementById('card-reward-2').innerText = r2.toLocaleString() + ' F';
+        document.getElementById('card-reward-3').innerText = r3.toLocaleString() + ' F';
+
+        const totalInvites = c1 + c2 + c3;
+        const totalRevenuInvitation = r1 + r2 + r3;
+
+        const bottomCountEl = document.getElementById('team-total-count-bottom');
+        if (bottomCountEl) bottomCountEl.innerText = totalInvites;
+
+        const bottomRevEl = document.getElementById('team-total-revenue-bottom');
+        if (bottomRevEl) bottomRevEl.innerText = 'FCFA ' + totalRevenuInvitation.toLocaleString();
+
+        document.getElementById('team-tab-rev-1').innerText = r1.toLocaleString();
+        document.getElementById('team-tab-label-1').innerText = `Niveau 1(${c1})`;
+
+        document.getElementById('team-tab-rev-2').innerText = r2.toLocaleString();
+        document.getElementById('team-tab-label-2').innerText = `Niveau 2(${c2})`;
+
+        document.getElementById('team-tab-rev-3').innerText = r3.toLocaleString();
+        document.getElementById('team-tab-label-3').innerText = `Niveau 3(${c3})`;
+
+        const activeTabBtn = document.getElementById('tab-btn-1');
+        if (activeTabBtn) {
+          filtrerEquipeTab('1', activeTabBtn);
+        }
+
+      } catch (err) {
+        console.error("Erreur lors du chargement de l'équipe :", err);
+      }
+    }
+
+    function filtrerEquipeTab(niveau, element) {
+      ['1', '2', '3'].forEach(niv => {
+        const btn = document.getElementById(`tab-btn-${niv}`);
+        if (btn) {
+          btn.style.borderBottom = '2px solid transparent';
+        }
+      });
+      element.style.borderBottom = '2px solid #8b5cf6';
+
+      const membres = document.querySelectorAll('.team-member-item');
+      let count = 0;
+
+      membres.forEach(m => {
+        const niv = m.getAttribute('data-niveau');
+        if (niv === niveau) {
+          m.style.display = 'flex';
+          count++;
+        } else {
+          m.style.display = 'none';
+        }
+      });
+
+      const container = document.getElementById('team-list-container');
+      let existingNotice = container.querySelector('.empty-team-notice');
+      if (existingNotice) existingNotice.remove();
+
+      if (count === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-team-notice';
+        emptyDiv.style.cssText = 'text-align: center; color: #9ca3af; font-size: 13px; padding: 40px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px;';
+        emptyDiv.innerHTML = `
+          <div style="width: 70px; height: 70px; background: rgba(255,255,255,0.03); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px;">📋</div>
+          <div>Plus aucune donnée</div>
+        `;
+        container.appendChild(emptyDiv);
+      }
+    }
+
+    function mettreAJourAffichageSolde() {
+      const formattedBalance = `FCFA ${currentUser.balance.toLocaleString()}`;
+      const formattedCumule = `FCFA ${(currentUser.soldeCumule || 0).toLocaleString()}`;
+      
+      document.getElementById('retrait-solde-display').innerText = formattedBalance;
+      document.getElementById('moi-balance-display').innerText = formattedBalance;
+
+      const accueilDispo = document.getElementById('accueil-solde-dispo');
+      if (accueilDispo) accueilDispo.innerText = formattedBalance;
+
+      const accueilCumule = document.getElementById('accueil-solde-cumule');
+      if (accueilCumule) accueilCumule.innerText = formattedCumule;
+      
+      const countEl = document.getElementById('commande-produits-count');
+      if (countEl) {
+        countEl.innerText = (currentUser.commandes && currentUser.commandes.length > 0) ? currentUser.commandes.length : 0;
+      }
+
+      let totalCumuleRevenus = 0;
+      if (currentUser.commandes) {
+        currentUser.commandes.forEach(c => {
+          totalCumuleRevenus += (c.percu || 0);
+        });
+      }
+      const totalRevenusEl = document.getElementById('commande-total-revenus-val');
+      if (totalRevenusEl) {
+        totalRevenusEl.innerText = `FCFA ${totalCumuleRevenus.toLocaleString()}`;
+      }
+    }
+
+    function handleLogout() {
+      demanderConfirmation("Voulez-vous vraiment vous déconnecter ?", function(confirmed) {
+        if (confirmed) {
+          localStorage.removeItem('sanofi_logged_user');
+          
+          document.getElementById('auth-page').classList.remove('hidden');
+          document.getElementById('main-navbar').classList.remove('active');
+          document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        }
+      });
+    }
+
+    function naviguer(pageId, element, pushHistory = true) {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      if (element) element.classList.add('active');
+
+      if (pushHistory) {
+        history.pushState({ page: pageId }, "", `#${pageId}`);
+      }
+    }
+
+    function ouvrirSousPage(pageId, pushHistory = true) {
+      verifierEtCrediterRevenus24h();
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      renderGopayProviders();
+      if (pageId === 'team-details-page' || pageId === 'equipe') {
+        chargerEtAfficherEquipe();
+      }
+
+      if (pushHistory) {
+        history.pushState({ page: pageId }, "", `#${pageId}`);
+      }
+    }
+
+    window.addEventListener('popstate', function(event) {
+      if (event.state && event.state.page) {
+        const pageId = event.state.page;
+        
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+        const targetPage = document.getElementById(pageId);
+        if (targetPage) {
+          targetPage.classList.add('active');
+        }
+
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        if (['accueil', 'commande', 'equipe', 'moi'].includes(pageId)) {
+          const navItems = document.querySelectorAll('.navbar .nav-item');
+          navItems.forEach(item => {
+            if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(pageId)) {
+              item.classList.add('active');
+            }
+          });
+        }
+      } else {
+        ouvrirSousPage('accueil', false);
+      }
+    });
+
+    function ouvrirModalCarte() {
+      onCardCountryChange();
+      document.getElementById('card-modal').classList.add('active');
+    }
+
+    function fermerModalCarte() {
+      document.getElementById('card-modal').classList.remove('active');
+    }
+
+    function ouvrirRetraitHistory() {
+      renderRetraitHistory();
+      document.getElementById('retrait-history-modal').classList.add('active');
+    }
+
+    function fermerRetraitHistory() {
+      document.getElementById('retrait-history-modal').classList.remove('active');
+    }
+
+    function ouvrirDepotHistory() {
+      renderDepotHistory();
+      document.getElementById('depot-history-modal').classList.add('active');
+    }
+
+    function fermerDepotHistory() {
+      document.getElementById('depot-history-modal').classList.remove('active');
+    }
+
+    function ouvrirModalArgentGratuit() {
+      const aujourdHui = new Date().toISOString().split('T')[0];
+      const btn = document.getElementById('claim-gift-btn');
+      const statusMsg = document.getElementById('gift-status-msg');
+      const daysClaimedEl = document.getElementById('total-days-claimed');
+
+      if (daysClaimedEl) {
+        daysClaimedEl.innerText = currentUser.totalDaysClaimed || 0;
+      }
+
+      if (currentUser.lastDailyClaim === aujourdHui) {
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+        statusMsg.innerText = "✓ Bonus déjà réclamé aujourd'hui. Revenez demain !";
+        statusMsg.style.color = '#ef4444';
+      } else {
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        statusMsg.innerText = "🎁 150 FCFA disponibles à réclamer pour aujourd'hui !";
+        statusMsg.style.color = '#10b981';
+      }
+
+      document.getElementById('gift-fullscreen-modal').classList.add('active');
+    }
+
+    function fermerModalArgentGratuit() {
+      document.getElementById('gift-fullscreen-modal').classList.remove('active');
+    }
+
+    async function reclaimerArgentGratuit() {
+      const aujourdHui = new Date().toISOString().split('T')[0];
+
+      if (currentUser.lastDailyClaim === aujourdHui) {
+        afficherAlerte("⚠️ Vous avez déjà réclamé votre bonus quotidien de 150 FCFA aujourd'hui. Revenez demain !");
+        return;
+      }
+
+      const montantBonus = 150;
+      currentUser.balance += montantBonus;
+      currentUser.soldeCumule = (currentUser.soldeCumule || 0) + montantBonus;
+      currentUser.lastDailyClaim = aujourdHui;
+      currentUser.totalDaysClaimed = (currentUser.totalDaysClaimed || 0) + 1;
+
+      try {
+        const cleanPhone = currentUser.phone.replace(/[^0-9]/g, '');
+        const fullPhoneKey = `${currentUser.country}_${cleanPhone.slice(-8)}`;
+        await db.collection('users').doc(fullPhoneKey).update({ 
+          balance: currentUser.balance,
+          soldeCumule: currentUser.soldeCumule,
+          lastDailyClaim: currentUser.lastDailyClaim,
+          totalDaysClaimed: currentUser.totalDaysClaimed
+        });
+
+        mettreAJourAffichageSolde();
+        document.getElementById('total-days-claimed').innerText = currentUser.totalDaysClaimed;
+        afficherAlerte(`🎉 Félicitations ! Vous avez reçu ${montantBonus} FCFA de bonus gratuit.`);
+
+        const btn = document.getElementById('claim-gift-btn');
+        const statusMsg = document.getElementById('gift-status-msg');
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+        statusMsg.innerText = "✓ Bonus déjà réclamé aujourd'hui. Revenez demain !";
+        statusMsg.style.color = '#ef4444';
+      } catch (error) {
+        console.error("Erreur lors de la réclamation du bonus quotidien :", error);
+        afficherAlerte("Erreur de mise à jour du solde sur Firestore.");
+      }
+    }
+
+    function onCardCountryChange() {
+      const countryElement = document.getElementById('card-country-select');
+      const country = (countryElement && countryElement.value) ? countryElement.value : (currentUser.country || 'BF');
+      const modeSelect = document.getElementById('card-mode-select');
+      
+      modeSelect.innerHTML = '<option value="" disabled selected>Veuillez sélectionner</option>';
+
+      let providers = cardProvidersByCountry[country] || ['Orange Money', 'Moov Money'];
+      providers.forEach(prov => {
+        const opt = document.createElement('option');
+        opt.value = prov;
+        opt.innerText = prov;
+        modeSelect.appendChild(opt);
+      });
+    }
+
+    function ouvrirService() {
+      ouvrirSousPage('service-page');
+    }
+
+    async function enregistrerCarte() {
+      const countryElement = document.getElementById('card-country-select');
+      const country = (countryElement && countryElement.value) ? countryElement.value : (currentUser.country || 'BF');
+      const mode = document.getElementById('card-mode-select').value;
+      const nom = document.getElementById('card-name-input').value.trim();
+      const numero = document.getElementById('card-number-input').value.trim();
+
+      if (!mode) {
+        afficherAlerte("Veuillez sélectionner le type de portefeuille.");
+        return;
+      }
+      if (!nom || !numero) {
+        afficherAlerte("Veuillez saisir votre nom et votre numéro de portefeuille.");
+        return;
+      }
+
+      carteUtilisateur = {
+        enregistree: true,
+        mode: mode,
+        nom: nom,
+        numero: `${countryConfig[country].prefix} ${numero}`
+      };
+
+      try {
+        const cleanPhone = currentUser.phone.replace(/[^0-9]/g, '');
+        const fullPhoneKey = `${currentUser.country}_${cleanPhone.slice(-8)}`;
+        await db.collection('users').doc(fullPhoneKey).update({ card: carteUtilisateur });
+
+        document.getElementById('display-user-name').innerText = `${mode} - ${nom} (${carteUtilisateur.numero})`;
+
+        fermerModalCarte();
+        afficherAlerte("Votre compte de retrait a été enregistré avec succès !");
+      } catch (error) {
+        console.error("Erreur d'enregistrement de carte:", error);
+        afficherAlerte("Erreur lors de la sauvegarde sur Firestore.");
+      }
+    }
+
+    async function changerMotDePasse() {
+      const oldP = document.getElementById('old-pass').value;
+      const newP = document.getElementById('new-pass').value;
+      const confirmP = document.getElementById('confirm-new-pass').value;
+
+      if (!oldP || !newP || !confirmP) {
+        afficherAlerte("Veuillez remplir tous les champs.");
+        return;
+      }
+      if (oldP !== currentUser.password) {
+        afficherAlerte("L'ancien mot de passe est incorrect.");
+        return;
+      }
+      if (newP.length < 4) {
+        afficherAlerte("Le nouveau mot de passe doit comporter au moins 4 caractères.");
+        return;
+      }
+      if (newP !== confirmP) {
+        afficherAlerte("Les nouveaux mots de passe ne correspondent pas.");
+        return;
+      }
+
+      currentUser.password = newP;
+      try {
+        const cleanPhone = currentUser.phone.replace(/[^0-9]/g, '');
+        const fullPhoneKey = `${currentUser.country}_${cleanPhone.slice(-8)}`;
+        await db.collection('users').doc(fullPhoneKey).update({ password: newP });
+        
+        afficherAlerte("Votre mot de passe a été modifié avec succès !");
+        document.getElementById('old-pass').value = '';
+        document.getElementById('new-pass').value = '';
+        document.getElementById('confirm-new-pass').value = '';
+        ouvrirSousPage('moi');
+      } catch (error) {
+        console.error("Erreur modification MDP :", error);
+        afficherAlerte("Erreur lors de la mise à jour dans Firestore.");
+      }
+    }
+
+    function calculerFraisRetrait(valeur) {
+      const montant = parseFloat(valeur);
+      const spanMontantRecu = document.getElementById('montant-net-recu');
+      if (!isNaN(montant) && montant > 0) {
+        spanMontantRecu.innerText = (montant * 0.78).toFixed(2);
+      } else {
+        spanMontantRecu.innerText = "0.00";
+      }
+    }
+
+    async function soumettreRetrait() {
+      if (!currentUser.commandes || currentUser.commandes.length === 0) {
+        afficherAlerte("⚠️ Restriction de sécurité : Vous devez acheter au moins un VIP VIP pour pouvoir effectuer un retrait.");
+        return;
+      }
+
+      if (!carteUtilisateur.enregistree) {
+        afficherAlerte("Veuillez d'abord ajouter votre compte de portefeuille.");
+        ouvrirModalCarte();
+        return;
+      }
+
+      const val = parseFloat(document.getElementById('retrait-input-val').value);
+      if (isNaN(val) || val < 1200) {
+        afficherAlerte("Le montant minimum de retrait est de 1 200 FCFA.");
+        return;
+      }
+
+      if (val > currentUser.balance) {
+        afficherAlerte("Solde insuffisant pour ce retrait.");
+        return;
+      }
+
+      currentUser.balance -= val;
+      const netRecu = val * 0.78;
+      
+      const now = new Date();
+      const refId = 'B' + now.getFullYear().toString().slice(-2) + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + Math.floor(100000000000 + Math.random() * 900000000000);
+      const dateStr = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear() + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+
+      const nouvelleTransaction = {
+        ref: refId,
+        montant: val,
+        recu: netRecu,
+        date: dateStr,
+        statut: 'En attente'
+      };
+
+      if (!currentUser.withdrawals) currentUser.withdrawals = [];
+      currentUser.withdrawals.unshift(nouvelleTransaction);
+
+      try {
+        const cleanPhone = currentUser.phone.replace(/[^0-9]/g, '');
+        const fullPhoneKey = `${currentUser.country}_${cleanPhone.slice(-8)}`;
+        await db.collection('users').doc(fullPhoneKey).update({ 
+          balance: currentUser.balance,
+          withdrawals: currentUser.withdrawals
+        });
+
+        await db.collection('messages').add({
+          userId: fullPhoneKey,
+          phone: currentUser.phone,
+          type: 'Demande Retrait',
+          content: `L'utilisateur a demandé un retrait de ${val.toLocaleString()} FCFA (Net reçu : ${netRecu.toFixed(2)} FCFA).`,
+          amount: val,
+          timestamp: Date.now()
+        });
+
+        mettreAJourAffichageSolde();
+        document.getElementById('retrait-input-val').value = '';
+        document.getElementById('montant-net-recu').innerText = '0.00';
+        
+        afficherAlerte(`Demande de retrait soumise !\n\nMontant : ${val} FCFA\nStatut : En attente de confirmation administrateur.`);
+        ouvrirRetraitHistory();
+      } catch (error) {
+        console.error("Erreur retrait:", error);
+        afficherAlerte("Erreur de mise à jour du solde.");
+      }
+    }
+
+    function renderRetraitHistory() {
+      const container = document.getElementById('retrait-history-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const list = (currentUser.withdrawals && currentUser.withdrawals.length > 0) ? currentUser.withdrawals : [];
+
+      if (list.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: #9ca3af; font-size: 13px; padding: 20px;">Aucun historique de retrait pour le moment.</div>`;
+        return;
+      }
+
+      list.forEach(item => {
+        const card = document.createElement('div');
+        card.style.cssText = 'background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 12px; color: #fff;';
+        const colorStatut = item.statut === 'Réussi' ? '#10b981' : '#a78bfa';
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: 700; font-size: 14px; color: #a78bfa;">
+            <span>${item.ref}</span>
+            <span style="color: ${colorStatut}; font-weight: 600;">${item.statut}</span>
+          </div>
+          <div style="font-size: 13px; color: #9ca3af; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; justify-content: space-between;"><span>Montant :</span> <span style="font-weight: 600; color: #ffffff;">FCFA ${item.montant.toLocaleString()}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Reçu :</span> <span style="font-weight: 600; color: #10b981;">FCFA ${item.recu.toLocaleString()}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Date :</span> <span style="color: #64748b;">${item.date}</span></div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderDepotHistory() {
+      const container = document.getElementById('depot-history-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const list = (currentUser.deposits && currentUser.deposits.length > 0) ? currentUser.deposits : [];
+
+      if (list.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: #9ca3af; font-size: 13px; padding: 20px;">Aucun historique de recharge pour le moment.</div>`;
+        return;
+      }
+
+      list.forEach(item => {
+        const card = document.createElement('div');
+        card.style.cssText = 'background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 16px; margin-bottom: 12px; color: #fff;';
+        const colorStatut = item.statut === 'Confirmé' || item.statut === 'Réussi' ? '#10b981' : '#a78bfa';
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: 700; font-size: 14px; color: #a78bfa;">
+            <span>${item.ref || 'RECHARGE'}</span>
+            <span style="color: ${colorStatut}; font-weight: 600;">${item.statut || 'En attente'}</span>
+          </div>
+          <div style="font-size: 13px; color: #9ca3af; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; justify-content: space-between;"><span>Méthode :</span> <span style="font-weight: 600; color: #ffffff;">${item.method || 'Mobile'}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Montant :</span> <span style="font-weight: 600; color: #10b981;">FCFA ${item.montant.toLocaleString()}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Date :</span> <span style="color: #64748b;">${item.date}</span></div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function setMontantRecharge(val, element) {
+      document.getElementById('recharge-amount').value = val;
+      const btns = element.parentElement.querySelectorAll('.preset-btn');
+      btns.forEach(b => b.classList.remove('active'));
+      element.classList.add('active');
+    }
+
+    function selectCountry(countryCode, prefix, element) {
+      currentCountry = countryCode;
+      currentPrefix = prefix;
+      const btns = element.parentElement.querySelectorAll('.method-btn');
+      btns.forEach(b => b.classList.remove('active'));
+      element.classList.add('active');
+      document.getElementById('gopay-phone-prefix').innerText = prefix;
+      renderGopayProviders();
+    }
+
+    function renderGopayProviders() {
+      const providersContainer = document.getElementById('gopay-providers');
+      if (!providersContainer) return;
+      providersContainer.innerHTML = '';
+
+      const providers = operatorsByCountry[currentCountry] || operatorsByCountry['BF'];
+      selectedOperator = providers[0].id;
+
+      providers.forEach((prov, idx) => {
+        const card = document.createElement('div');
+        card.className = `gopay-provider-card ${idx === 0 ? 'active' : ''}`;
+        card.onclick = function() {
+          document.querySelectorAll('.gopay-provider-card').forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          selectedOperator = prov.id;
+        };
+
+        card.innerHTML = `
+          <div class="gopay-provider-badge ${prov.badge}">${prov.text}</div>
+          <div class="gopay-provider-name">${prov.name}</div>
+        `;
+        providersContainer.appendChild(card);
+      });
+    }
+
+    function ouvrirGopayPleinEcran() {
+      const montant = parseInt(document.getElementById('recharge-amount').value);
+      if (isNaN(montant) || montant < 4000) {
+        afficherAlerte("Erreur : Le montant minimum pour un dépôt est de 3 000 FCFA.");
+        return;
+      }
+      document.getElementById('gopay-display-amount').innerText = `XOF ${montant}`;
+      document.getElementById('gopay-form-section').style.display = 'block';
+      document.getElementById('payment-bf-view').style.display = 'none';
+      document.getElementById('payment-wave-view').style.display = 'none';
+      document.getElementById('gopay-modal').classList.add('active');
+    }
+
+    function fermerGopayPleinEcran() {
+      document.getElementById('gopay-modal').classList.remove('active');
+    }
+
+    async function validerGopay() {
+      const montant = parseInt(document.getElementById('recharge-amount').value);
+      const phone = document.getElementById('gopay-phone-input').value.trim();
+
+      if (!phone) {
+        afficherAlerte("Veuillez saisir votre compte de paiement réel.");
+        return;
+      }
+
+      const cleanPhone = currentUser.phone.replace(/[^0-9]/g, '');
+      const fullPhoneKey = `${currentUser.country}_${cleanPhone.slice(-8)}`;
+
+      const now = new Date();
+      const refId = 'D' + now.getFullYear().toString().slice(-2) + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + Math.floor(100000000000 + Math.random() * 900000000000);
+      const dateStr = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear() + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+
+      const nouveauDepot = {
+        ref: refId,
+        montant: montant,
+        method: selectedOperator.toUpperCase(),
+        date: dateStr,
+        statut: 'En attente'
+      };
+
+      if (!currentUser.deposits) currentUser.deposits = [];
+      currentUser.deposits.unshift(nouveauDepot);
+
+      try {
+        await db.collection('deposits').add({
+          userId: fullPhoneKey,
+          phone: currentUser.phone,
+          amount: montant,
+          method: selectedOperator.toUpperCase(),
+          status: 'En attente',
+          timestamp: Date.now()
+        });
+
+        await db.collection('messages').add({
+          userId: fullPhoneKey,
+          phone: currentUser.phone,
+          type: 'Initiation Dépôt',
+          content: `L'utilisateur a initié un dépôt de ${montant.toLocaleString()} FCFA via ${selectedOperator.toUpperCase()} (Compte client : ${phone}).`,
+          amount: montant,
+          timestamp: Date.now()
+        });
+
+        await sauvegarderUtilisateurFirestore();
+        renderDepotHistory();
+      } catch (e) {
+        console.error("Erreur enregistrement dépôt/message", e);
+      }
+
+      document.getElementById('gopay-form-section').style.display = 'none';
+      document.getElementById('payment-bf-view').style.display = 'none';
+      document.getElementById('payment-wave-view').style.display = 'none';
+
+      let configKey = '';
+      if (currentCountry === 'BF') {
+        configKey = selectedOperator === 'orange' ? 'orange_bf' : 'moov_bf';
+      } else if (currentCountry === 'CM') {
+        configKey = 'orange_cm';
+      }
+
+      if (configKey && merchantConfig[configKey]) {
+        const config = merchantConfig[configKey];
+        
+        const providerLabel = document.getElementById('payment-provider-label');
+        providerLabel.innerText = config.providerLabel;
+        providerLabel.className = config.labelClass;
+
+        document.getElementById('payment-account-type').innerText = config.providerLabel;
+        document.getElementById('payment-account-number').innerText = config.accountNumber;
+        document.getElementById('payment-account-name').innerText = config.accountName;
+        document.getElementById('payment-bf-amount').innerText = `XOF ${montant}`;
+        
+        const btnPay = document.getElementById('pay-action-btn');
+        btnPay.className = `pay-btn ${config.btnClass}`;
+
+        document.getElementById('ussd-text').innerText = config.getUssd(config.accountNumber, montant);
+        document.getElementById('payment-bf-view').style.display = 'block';
+      } else {
+        document.getElementById('payment-wave-amount').innerText = `XOF ${montant}`;
+        document.getElementById('payment-wave-view').style.display = 'block';
+      }
+    }
+
+    async function soumettrePreuveWave() {
+      const montant = parseInt(document.getElementById('recharge-amount').value);
+      const cleanPhone = currentUser.phone.replace(/[^0-9]/g, '');
+      const fullPhoneKey = `${currentUser.country}_${cleanPhone.slice(-8)}`;
+      const fileInput = document.getElementById('wave-proof-file');
+
+      const now = new Date();
+      const refId = 'D' + now.getFullYear().toString().slice(-2) + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + Math.floor(100000000000 + Math.random() * 900000000000);
+      const dateStr = String(now.getDate()).padStart(2, '0') + '/' + String(now.getMonth() + 1).padStart(2, '0') + '/' + now.getFullYear() + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+
+      const nouveauDepot = {
+        ref: refId,
+        montant: montant,
+        method: selectedOperator.toUpperCase(),
+        date: dateStr,
+        statut: 'En attente'
+      };
+
+      if (!currentUser.deposits) currentUser.deposits = [];
+      currentUser.deposits.unshift(nouveauDepot);
+
+      const processSubmission = async (proofImageBase64 = '') => {
+        try {
+          await db.collection('deposits').add({
+            userId: fullPhoneKey,
+            phone: currentUser.phone,
+            amount: montant,
+            method: selectedOperator.toUpperCase(),
+            status: 'En attente',
+            proofImage: proofImageBase64,
+            timestamp: Date.now()
+          });
+
+          await db.collection('messages').add({
+            userId: fullPhoneKey,
+            phone: currentUser.phone,
+            type: 'Preuve / Dépôt',
+            content: `L'utilisateur a soumis une preuve de paiement pour un dépôt de ${montant.toLocaleString()} FCFA.`,
+            amount: montant,
+            proofImage: proofImageBase64,
+            timestamp: Date.now()
+          });
+
+          await sauvegarderUtilisateurFirestore();
+          renderDepotHistory();
+
+          afficherAlerte("Preuve envoyée ! Votre demande de dépôt est en attente de validation par l'administrateur.");
+          fermerGopayPleinEcran();
+        } catch (error) {
+          console.error("Erreur recharge:", error);
+          afficherAlerte("Erreur lors de l'enregistrement de la demande de dépôt.");
+        }
+      };
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          await processSubmission(e.target.result);
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        await processSubmission('');
+      }
+    }
+
+    function copierTexte(texte) {
+      navigator.clipboard.writeText(texte);
+      afficherAlerte("Copié : " + texte);
+    }
+
+    function executerUssd() {
+      const ussd = document.getElementById('ussd-text').innerText;
+      window.location.href = "tel:" + encodeURIComponent(ussd);
+    }
+
+    window.onload = async function() {
+      history.replaceState({ page: 'accueil' }, "", "#accueil");
+
+      const urlParams = new URLSearchParams(window.location.search);
+      let refCodeFromUrl = urlParams.get('code');
+
+      if (!refCodeFromUrl && window.location.hash.includes('code=')) {
+        const hashPart = window.location.hash.includes('?') 
+          ? window.location.hash.split('?')[1] 
+          : window.location.hash.replace('#', '');
+        const hashParams = new URLSearchParams(hashPart);
+        refCodeFromUrl = hashParams.get('code');
+      }
+
+      if (refCodeFromUrl) {
+        const regCodeInput = document.getElementById('reg-code');
+        if (regCodeInput) {
+          regCodeInput.value = refCodeFromUrl.trim();
+        }
+        toggleAuthMode('register');
+      }
+
+      initialiserTickerDepots();
+      renderGopayProviders();
+      onCardCountryChange();
+      updateAuthForm('reg');
+      updateAuthForm('login');
+
+      const savedUserKey = localStorage.getItem('sanofi_logged_user');
+      if (savedUserKey) {
+        try {
+          const docSnap = await db.collection('users').doc(savedUserKey).get();
+          if (docSnap.exists) {
+            currentUser = docSnap.data();
+            if (!currentUser.myInviteCode) {
+              currentUser.myInviteCode = Math.random().toString(36).substring(2, 8);
+              await db.collection('users').doc(savedUserKey).update({ myInviteCode: currentUser.myInviteCode });
+            }
+            if (currentUser.soldeCumule === undefined) currentUser.soldeCumule = 0;
+            if (!currentUser.withdrawals) currentUser.withdrawals = [];
+            if (!currentUser.deposits) currentUser.deposits = [];
+            if (!currentUser.commandes) currentUser.commandes = [];
+            if (!currentUser.lastDailyClaim) currentUser.lastDailyClaim = '';
+            if (currentUser.totalDaysClaimed === undefined) currentUser.totalDaysClaimed = 0;
+            if (currentUser.rechargeTotale === undefined) currentUser.rechargeTotale = 0;
+
+            if (currentUser.card) {
+              carteUtilisateur = currentUser.card;
+              if (carteUtilisateur.enregistree) {
+                document.getElementById('display-user-name').innerText = `${carteUtilisateur.mode} - ${carteUtilisateur.nom} (${carteUtilisateur.numero})`;
+              }
+            }
+            connexionReussie(savedUserKey);
+          } else {
+            localStorage.removeItem('sanofi_logged_user');
+          }
+        } catch (err) {
+          console.error("Erreur lors de la reconnexion automatique :", err);
+        }
+      }
+    };
+  </script>
+
+</body>
+</html>
